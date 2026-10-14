@@ -16,7 +16,7 @@ Built for meetings, student presentations, and screen recordings — any time yo
 - **Script-aware recognition** — each script is turned into a custom language model for the recognizer (macOS 14+), so names and technical terms are heard correctly.
 - **Placed for eye contact** — about 5° below the camera by default. Two styles (glass card / caption capsule). Drag anywhere (snaps to the camera centerline), drag corners to resize, double-click to reset; remembered per screen.
 - **Smart constant-speed mode** — scrolls at your pace and pauses when you stop talking.
-- Hidden from screen sharing (in most apps), global hotkeys, import txt / md / docx / pdf / rtf, or drop a file onto the notch.
+- Hidden from screen sharing (see [Screen sharing](#screen-sharing)), global hotkeys, import txt / md / docx / pdf / rtf, or drop a file onto the notch.
 
 ## Requirements
 
@@ -31,6 +31,21 @@ open build/OpenSpeech.app
 ```
 
 Allow **Microphone** and **Speech Recognition** when asked. The app is ad-hoc signed, so macOS may ask again after each rebuild.
+
+## Screen sharing
+
+The prompter is invisible to the other people in your meeting — they only see your screen, not your script.
+
+| App | Hidden while sharing? |
+| --- | --- |
+| Tencent Meeting (腾讯会议 / VooV) | ✅ Works out of the box (tested) |
+| Microsoft Teams | ✅ Works out of the box (tested) |
+| DingTalk Meetings (钉钉会议) | ✅ Works out of the box (tested) |
+| Zoom | ⚙️ Needs a one-time setting (below) |
+
+**Zoom setup (once, stays on):** Zoom → **Settings** → **Share Screen** → **Advanced** (at the bottom) → **Screen capture mode** → choose **Advanced capture with window filtering**.
+
+Without this, Zoom's default capture mode records everything on screen, including the prompter.
 
 ## Shortcuts
 
