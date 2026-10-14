@@ -1,0 +1,13 @@
+# 编译产物
+build/
+*.app
+# 本地测试素材（合成语音、个人稿件）、旧版本代码备份
+bench/
+backups/
+*.wav
+*.caf
+# 第三方产品截图（版权归原厂商，不放进公开仓库）
+docs/competitor-ui/
+# 本地截图（UI 还在调整）
+screenshots/
+.DS_Store
