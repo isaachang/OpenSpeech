@@ -92,9 +92,14 @@ final class PrompterEngine: ObservableObject {
             self.activeMode = .pace
             self.showToast("语音识别不可用（\(reason)），已切到智能匀速")
         }
-        Publishers.Merge(settings.$fontSize.map { _ in () }, settings.$lineChars.map { _ in () })
+        // 字号 / 样式 / 每行字数变了就重新折行（objectWillChange 在改之前发出，切到下一轮主线程再读新值）
+        settings.objectWillChange
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] in self?.relayout() }
+            .sink { [weak self] in
+                guard let self else { return }
+                let key = "\(self.settings.displayFontSize)-\(self.settings.textWidth)"
+                if key != self.layoutKey { self.relayout() }
+            }
             .store(in: &bag)
     }
 
@@ -373,9 +378,12 @@ final class PrompterEngine: ObservableObject {
         speech.rotate()
     }
 
+    private var layoutKey = ""
+
     private func relayout() {
         guard !parsed.glyphs.isEmpty else { return }
-        lines = PrompterLayout.layout(parsed, fontSize: settings.fontSize,
+        layoutKey = "\(settings.displayFontSize)-\(settings.textWidth)"
+        lines = PrompterLayout.layout(parsed, fontSize: settings.displayFontSize,
                                       maxWidth: settings.textWidth)
         var map = Array(repeating: 0, count: parsed.units.count)
         for (i, l) in lines.enumerated() { for u in l.unitRange { map[u] = i } }

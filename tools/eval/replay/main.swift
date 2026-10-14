@@ -1,5 +1,5 @@
 import Foundation
-let dir = (NSHomeDirectory() as NSString).appendingPathComponent("Library/Application Support/OpenPitch/logs")
+let dir = (NSHomeDirectory() as NSString).appendingPathComponent("Library/Application Support/OpenSpeech/logs")
 var TS = 0, TU = 0, TV = 0; var TA = 0, TB = 0, TL = 0, TN = 0; var lat: [Double] = []; var slowLat = 0
 for f in try! FileManager.default.contentsOfDirectory(atPath: dir).sorted() where f.hasSuffix(".jsonl") {
   let lines = try! String(contentsOfFile: dir + "/" + f, encoding: .utf8).split(separator: "\n")

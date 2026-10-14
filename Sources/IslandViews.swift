@@ -6,6 +6,7 @@ struct IslandActions {
     var openLibrary: () -> Void
     var importURLs: ([URL]) -> Void
     var cycleScript: (Int) -> Void
+    var resetPosition: () -> Void
 }
 
 struct IslandRootView: View {
@@ -16,29 +17,50 @@ struct IslandRootView: View {
     let actions: IslandActions
     var acceptsDrop = true
 
-    private var stateKey: String { "\(engine.phase)-\(model.hovering)-\(model.dropTargeted)-\(settings.layoutStyle)" }
+    private var stateKey: String { "\(engine.phase)-\(model.hovering)-\(model.dropTargeted)-\(settings.displayStyle)" }
+
+    private var hint: String? {
+        if engine.previewing { return "预览：拖动调位置 · 双击回默认 · ⌥⌘P 开始" }
+        if engine.isPaused && engine.phase == .presenting { return "已暂停 · ⌥⌘P 继续" }
+        return nil
+    }
 
     var body: some View {
         let layout = IslandMetrics.layout(engine: engine, model: model, settings: settings)
+        let spring = Animation.spring(response: 0.42, dampingFraction: 0.8)
         ZStack(alignment: .topLeading) {
             if let card = layout.card {
-                // 刘海和卡片之间一根细细的“悬挂线”
-                HangingThread(height: max(0, card.minY - model.notch.height))
-                    .frame(width: model.panelWidth, alignment: .center)
-                    .offset(y: model.notch.height)
-                    .transition(.opacity)
-                PrompterCard(engine: engine, settings: settings, model: model, frame: card)
-                    .frame(width: card.width, height: card.height)
+                if layout.centered {
+                    // 对准镜头中线时，刘海和卡片之间一根细细的“悬挂线”
+                    HangingThread(height: max(0, card.minY - model.notch.height))
+                        .frame(width: model.panelSize.width, alignment: .center)
+                        .offset(y: model.notch.height)
+                        .transition(.opacity)
+                }
+                PrompterCard(engine: engine, settings: settings, model: model, frame: card, reset: actions.resetPosition)
                     .offset(x: card.minX, y: card.minY)
                     .transition(.asymmetric(insertion: .opacity.combined(with: .offset(y: -18)).animation(.spring(response: 0.5, dampingFraction: 0.82).delay(0.08)),
                                             removal: .opacity.animation(.easeIn(duration: 0.15))))
+                if let ctl = layout.controls {
+                    ZStack {
+                        if model.cardHovering && !model.dragging && engine.phase == .presenting {
+                            CardControls(engine: engine, glass: settings.displayStyle == .glass).transition(.opacity)
+                        } else if let hint, !model.dragging {
+                            CardHint(text: hint).transition(.opacity)
+                        }
+                    }
+                    .frame(width: ctl.width, height: ctl.height)
+                    .offset(x: ctl.minX, y: ctl.minY)
+                    .animation(.easeOut(duration: 0.18), value: model.cardHovering)
+                }
             }
             island(layout.island)
-                .frame(width: model.panelWidth, alignment: .top)
+                .frame(width: model.panelSize.width, alignment: .top)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .animation(.spring(response: 0.42, dampingFraction: 0.8), value: layout)
-        .animation(.spring(response: 0.42, dampingFraction: 0.8), value: stateKey)
+        // 拖动 / 调大小时卡片要紧跟鼠标，不加弹簧
+        .animation(model.dragging ? nil : spring, value: layout)
+        .animation(spring, value: stateKey)
         .environment(\.colorScheme, .dark)
     }
 
@@ -67,21 +89,10 @@ struct IslandRootView: View {
                     PeekContent(store: store, settings: settings, notch: model.notch, flash: model.flash, actions: actions)
                         .transition(.islandContent)
                 }
-            case .countdown(let n):
-                if settings.layoutStyle == .card {
-                    CompactCountdownContent(notch: model.notch, engine: engine).transition(.islandContent)
-                } else {
-                    CountdownContent(n: n, notch: model.notch, engine: engine, settings: settings)
-                        .transition(.islandContent)
-                }
+            case .countdown:
+                CompactCountdownContent(notch: model.notch, engine: engine).transition(.islandContent)
             case .presenting:
-                if settings.layoutStyle == .card {
-                    CompactPresentingContent(engine: engine, settings: settings, notch: model.notch, hovering: model.hovering)
-                        .transition(.islandContent)
-                } else {
-                    PresentingContent(engine: engine, settings: settings, notch: model.notch, hovering: model.hovering)
-                        .transition(.islandContent)
-                }
+                CompactPresentingContent(engine: engine, notch: model.notch).transition(.islandContent)
             case .finished:
                 FinishedContent(summary: engine.summary, notch: model.notch)
                     .transition(.islandContent)
@@ -154,14 +165,12 @@ struct PeekContent: View {
             TopStrip(notch: notch) {
                 HStack(spacing: 6) {
                     AppGlyph(size: 15)
-                    Text("OpenPitch").font(.system(size: 12, weight: .bold, design: .rounded))
+                    Text("OpenSpeech").font(.system(size: 12, weight: .bold, design: .rounded))
                 }
             } right: {
                 Group {
                     if let flash {
                         Label(flash, systemImage: "checkmark.circle.fill").foregroundColor(Theme.green)
-                    } else {
-                        Label(settings.mode.short, systemImage: settings.mode.icon).foregroundColor(.white.opacity(0.55))
                     }
                 }
                 .font(.system(size: 11.5, weight: .semibold))
@@ -211,233 +220,7 @@ struct PeekContent: View {
     }
 }
 
-// MARK: - 倒计时
-
-struct CountdownContent: View {
-    let n: Int
-    let notch: NotchInfo
-    @ObservedObject var engine: PrompterEngine
-    @ObservedObject var settings: PrompterSettings
-
-    var hint: String {
-        engine.activeMode == .voice
-            ? "开口就开始 · 你讲到哪，提词跟到哪"
-            : "按 \(Int(engine.paceSpeed)) \(engine.unitLabel) 滚动\(settings.pauseOnSilence ? " · 你停它就停" : "")"
-    }
-
-    var body: some View {
-        VStack(spacing: 2) {
-            TopStrip(notch: notch) {
-                Text(engine.title).lineLimit(1).foregroundColor(.white.opacity(0.5))
-            } right: {
-                Label(engine.activeMode.title, systemImage: engine.activeMode.icon).foregroundColor(.white.opacity(0.6))
-            }
-            .font(.system(size: 11.5, weight: .semibold))
-            Spacer(minLength: 0)
-            Text("\(n)")
-                .font(.system(size: 60, weight: .heavy, design: .rounded))
-                .foregroundStyle(Theme.accent)
-                .contentTransition(.numericText(countsDown: true))
-                .animation(.spring(response: 0.35, dampingFraction: 0.7), value: n)
-            Text(hint).font(.system(size: 13, weight: .medium)).foregroundColor(.white.opacity(0.7))
-            Text("提词就在摄像头正下方，看稿 = 看镜头").font(.system(size: 11)).foregroundColor(.white.opacity(0.35))
-            Spacer(minLength: 0)
-        }
-    }
-}
-
-// MARK: - 正在提词
-
-struct PresentingContent: View {
-    @ObservedObject var engine: PrompterEngine
-    @ObservedObject var settings: PrompterSettings
-    let notch: NotchInfo
-    let hovering: Bool
-
-    private var dot: StatusDot.DotState {
-        if engine.isPaused { return .paused }
-        if !engine.listening { return .off }
-        return engine.isSpeaking ? .speaking : .listening
-    }
-
-    var body: some View {
-        VStack(spacing: 0) {
-            TopStrip(notch: notch) {
-                HStack(spacing: 8) {
-                    StatusDot(state: dot)
-                    Text(Fmt.clock(engine.elapsed))
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
-                        .monospacedDigit()
-                        .foregroundColor(.white.opacity(0.9))
-                    if engine.previewing {
-                        Text("预览 · ⌥⌘P 开始").font(.system(size: 11.5, weight: .semibold)).foregroundColor(Theme.amber)
-                    } else if engine.isPaused {
-                        Text("已暂停").font(.system(size: 11.5, weight: .semibold)).foregroundColor(Theme.amber)
-                    } else if engine.listening {
-                        Waveform(levels: engine.levels, active: engine.isSpeaking)
-                    }
-                }
-            } right: {
-                SpeedChip(engine: engine)
-            }
-
-            PrompterTextView(engine: engine, fontSize: settings.fontSize, visibleLines: settings.visibleLines,
-                             textWidth: settings.textWidth, align: .leading, caret: true, lens: false)
-                .padding(.leading, PrompterLayout.caretGap)
-                .frame(maxWidth: .infinity)
-                .padding(.top, 6)
-
-            ZStack {
-                if hovering {
-                    ControlBar(engine: engine, settings: settings).transition(.opacity)
-                } else if let toast = engine.toast {
-                    HStack(spacing: 6) {
-                        Image(systemName: "sparkles")
-                        Text(toast).lineLimit(1)
-                    }
-                    .font(.system(size: 11.5, weight: .medium))
-                    .foregroundColor(Theme.amber)
-                    .padding(.horizontal, 26)
-                    .transition(.opacity)
-                } else {
-                    ProgressLine(engine: engine).transition(.opacity)
-                }
-            }
-            .frame(height: 38)
-            .animation(.easeOut(duration: 0.18), value: hovering)
-            .animation(.easeOut(duration: 0.18), value: engine.toast)
-        }
-    }
-}
-
-struct PrompterTextView: View {
-    @ObservedObject var engine: PrompterEngine
-    let fontSize: Double
-    let visibleLines: Int
-    let textWidth: CGFloat
-    var align: TextAlign = .leading
-    /// 左侧的竖条光标（灵动岛样式）
-    var caret = true
-    /// 正在读的那一行背后的光带（卡片样式）
-    var lens = false
-
-    private enum Role { case read, current, upcoming, emphasis, cue, cueRead }
-
-    private func color(_ r: Role) -> Color {
-        switch r {
-        case .read: return .white.opacity(0.3)
-        case .current: return Theme.mint
-        case .upcoming: return .white
-        case .emphasis: return Theme.emphasis
-        case .cue: return Theme.cue.opacity(0.95)
-        case .cueRead: return Theme.cue.opacity(0.35)
-        }
-    }
-
-    var body: some View {
-        let lh = PrompterLayout.lineHeight(fontSize)
-        let anchor = visibleLines >= 3 ? 1 : 0
-        let scroll = engine.scroll
-        let base = Int(scroll)
-        let lo = max(0, base - 3)
-        let hi = min(engine.lines.count, base + visibleLines + 3)
-        let cursorInt = Int(engine.cursor)
-        let font = Font(PrompterLayout.font(fontSize) as CTFont)
-
-        ZStack(alignment: .topLeading) {
-            ForEach(lo..<max(lo, hi), id: \.self) { li in
-                lineText(engine.lines[li], cursor: cursorInt)
-                    .font(font)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                    .frame(width: textWidth, height: lh, alignment: align == .center ? .center : .leading)
-                    .offset(y: CGFloat(li) * lh)
-                    .opacity(opacity(Double(li) - scroll))
-            }
-        }
-        .frame(width: textWidth, alignment: .topLeading)
-        .offset(y: (CGFloat(anchor) - CGFloat(scroll)) * lh)
-        .frame(width: textWidth, height: CGFloat(visibleLines) * lh, alignment: .top)
-        .clipped()
-        .mask(fadeMask)
-        .background(alignment: .topLeading) {
-            if lens {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color.white.opacity(0.07))
-                    .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Color.white.opacity(0.05)))
-                    .frame(width: textWidth + 24, height: lh * 1.04)
-                    .offset(x: -12, y: CGFloat(anchor) * lh - lh * 0.02)
-            }
-        }
-        .overlay(alignment: .topLeading) {
-            if caret {
-                Capsule()
-                    .fill(Theme.accent)
-                    .frame(width: 3, height: lh * 0.56)
-                    .shadow(color: Theme.mint.opacity(engine.isSpeaking ? 0.9 : 0), radius: 6)
-                    .offset(x: -PrompterLayout.caretGap, y: CGFloat(anchor) * lh + lh * 0.22)
-            }
-        }
-        .blur(radius: engine.isPaused && !engine.previewing ? 1.5 : 0)
-        .opacity(engine.isPaused && !engine.previewing ? 0.55 : 1)
-        .animation(.easeOut(duration: 0.2), value: engine.isPaused)
-    }
-
-    private var fadeMask: LinearGradient {
-        if visibleLines >= 3 {
-            return LinearGradient(stops: [.init(color: .black.opacity(0.25), location: 0),
-                                          .init(color: .black, location: 0.3),
-                                          .init(color: .black, location: 0.72),
-                                          .init(color: .black.opacity(0.15), location: 1)],
-                                  startPoint: .top, endPoint: .bottom)
-        }
-        return LinearGradient(colors: [.black, .black.opacity(visibleLines == 1 ? 1 : 0.4)], startPoint: .top, endPoint: .bottom)
-    }
-
-    /// d = 这一行相对滚动位置的距离（连续值），在各整数点之间线性插值，滚动时亮度也是渐变的
-    private func opacity(_ d: Double) -> Double {
-        func at(_ i: Int) -> Double {
-            switch i {
-            case 0: return 1
-            case -1: return 0.6
-            case 1: return 0.82
-            case 2: return 0.62
-            default: return 0.4
-            }
-        }
-        let f = d.rounded(.down)
-        let t = d - f
-        return at(Int(f)) * (1 - t) + at(Int(f) + 1) * t
-    }
-
-    private func role(_ g: Glyph, cursor: Int) -> Role {
-        let read = g.unit >= 0 && g.unit < cursor
-        if g.style == .cue { return read ? .cueRead : .cue }
-        if read { return .read }
-        if g.isUnit && (g.unit == cursor || (g.unit == cursor + 1 && !engine.parsed.isMostlyLatin)) { return .current }
-        return g.style == .emphasis ? .emphasis : .upcoming
-    }
-
-    private func lineText(_ line: PrompterLine, cursor: Int) -> Text {
-        var result = Text(verbatim: "")
-        var buf = ""
-        var runRole: Role?
-        let glyphs = engine.parsed.glyphs
-        for gi in line.glyphs {
-            let g = glyphs[gi]
-            if g.char.isNewline { continue }
-            let r = role(g, cursor: cursor)
-            if r != runRole {
-                if let rr = runRole, !buf.isEmpty { result = result + Text(verbatim: buf).foregroundColor(color(rr)) }
-                buf = ""
-                runRole = r
-            }
-            buf.append(g.char)
-        }
-        if let rr = runRole, !buf.isEmpty { result = result + Text(verbatim: buf).foregroundColor(color(rr)) }
-        return result
-    }
-}
+// MARK: - 状态小部件
 
 struct StatusDot: View {
     enum DotState { case off, listening, speaking, paused }
@@ -490,9 +273,11 @@ struct SpeedChip: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Image(systemName: engine.activeMode.icon)
-                .font(.system(size: 10, weight: .bold))
-                .foregroundColor(.white.opacity(0.55))
+            if engine.activeMode == .pace {
+                Image(systemName: engine.activeMode.icon)
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(.white.opacity(0.55))
+            }
             if let v = engine.verdict {
                 let (label, color): (String, Color) = {
                     switch v {
@@ -510,60 +295,6 @@ struct SpeedChip: View {
         }
         .font(.system(size: 11.5, weight: .semibold, design: .rounded))
         .lineLimit(1)
-    }
-}
-
-struct ProgressLine: View {
-    @ObservedObject var engine: PrompterEngine
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Text(engine.title)
-                .lineLimit(1)
-                .frame(maxWidth: 140, alignment: .leading)
-                .foregroundColor(.white.opacity(0.4))
-            GeometryReader { g in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(Color.white.opacity(0.1))
-                    Capsule().fill(Theme.accent).frame(width: max(4, g.size.width * engine.progress))
-                }
-            }
-            .frame(height: 4)
-            Text("\(Int(engine.progress * 100))%").monospacedDigit().foregroundColor(.white.opacity(0.65))
-            Text("剩余 \(Fmt.clock(engine.remaining))").monospacedDigit().foregroundColor(.white.opacity(0.4))
-        }
-        .font(.system(size: 11, weight: .medium, design: .rounded))
-        .padding(.horizontal, 30)
-    }
-}
-
-struct ControlBar: View {
-    @ObservedObject var engine: PrompterEngine
-    @ObservedObject var settings: PrompterSettings
-
-    var body: some View {
-        HStack(spacing: 6) {
-            IslandButton(icon: "chevron.up") { engine.jumpLines(-1) }
-            IslandButton(icon: engine.isPaused ? "play.fill" : "pause.fill", prominent: true) { engine.togglePause() }
-            IslandButton(icon: "chevron.down") { engine.jumpLines(1) }
-            Rectangle().fill(Color.white.opacity(0.12)).frame(width: 1, height: 16).padding(.horizontal, 3)
-            IslandButton(icon: engine.activeMode.icon, label: engine.activeMode.short) { engine.switchMode() }
-            if engine.activeMode == .pace {
-                IslandButton(icon: "minus") { engine.adjustSpeed(-10) }
-                IslandButton(icon: "plus") { engine.adjustSpeed(10) }
-            }
-            Spacer(minLength: 4)
-            IslandButton(icon: "rectangle.3.group", label: settings.activePreset.map { "预设 \($0.letter)" } ?? "自定义") {
-                let all = PlacementPreset.all
-                let next = settings.activePreset.map { p in all[(all.firstIndex(of: p)! + 1) % all.count] } ?? all[0]
-                settings.apply(next)
-                engine.showToast("预设 \(next.letter) · \(next.name) · \(next.detail)", duration: 2.2)
-            }
-            IslandButton(icon: "textformat.size.smaller") { settings.fontSize = max(16, settings.fontSize - 2) }
-            IslandButton(icon: "textformat.size.larger") { settings.fontSize = min(36, settings.fontSize + 2) }
-            IslandButton(icon: "xmark") { engine.stop() }
-        }
-        .padding(.horizontal, 26)
     }
 }
 

@@ -1,12 +1,12 @@
 import Foundation
 
 /// 跟随日志：每次提词一个 JSONL 文件，记录识别文字和每一步位置判断，用于离线回放调参。
-/// 只写在本机：~/Library/Application Support/OpenPitch/logs/
+/// 只写在本机：~/Library/Application Support/OpenSpeech/logs/
 final class SessionLogger {
     static let directory: URL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        .appendingPathComponent("OpenPitch/logs", isDirectory: true)
+        .appendingPathComponent("OpenSpeech/logs", isDirectory: true)
 
-    private let queue = DispatchQueue(label: "openpitch.log")
+    private let queue = DispatchQueue(label: "openspeech.log")
     private var handle: FileHandle?
     /// 这次提词对应的录音文件路径（只有打开“保存测试录音”时才会写）
     private(set) var audioURL: URL?

@@ -40,7 +40,7 @@ final class ScriptStore: ObservableObject {
             url = nil
         } else {
             let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-                .appendingPathComponent("OpenPitch", isDirectory: true)
+                .appendingPathComponent("OpenSpeech", isDirectory: true)
             try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
             url = dir.appendingPathComponent("scripts.json")
         }
@@ -183,7 +183,7 @@ enum SampleScripts {
     大家好！你有没有发现，录口播最难的往往不是内容，而是**记稿子**？
     眼睛一会儿看稿，一会儿看镜头，观众一眼就能看出来你在念。
     【停顿一拍】
-    所以我们做了 OpenPitch，一个住在 Mac 刘海里的提词器。
+    所以我们做了 OpenSpeech，一个住在 Mac 刘海里的提词器。
     它就贴在摄像头正下方，你看稿的时候，眼神几乎就是在**直视镜头**。
     更厉害的是，它会听你说话：你讲快，它就跟着快；你停下来喝口水，它就安静地等你；你跳过一句，它也能马上跟上。
     不用踩踏板，不用找人帮你滚屏，**你只需要专心表达**。
@@ -196,7 +196,7 @@ enum SampleScripts {
     Hi everyone! Here is a little secret about recording videos on a Mac.
     The hardest part is not what you say. It is **remembering** what you want to say.
     [Pause]
-    OpenPitch lives right inside your notch, just below the camera.
+    OpenSpeech lives right inside your notch, just below the camera.
     It listens while you talk, and the script follows your voice.
     Speed up, slow down, or skip a line. It keeps up with you.
     Give it a try, and see you in the next one!

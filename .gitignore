@@ -11,3 +11,4 @@ docs/competitor-ui/
 # 本地截图（UI 还在调整）
 screenshots/
 .DS_Store
+design/

@@ -1,6 +1,6 @@
 import Foundation
 
-/// `OpenPitch --replay <session.jsonl>`：用当前版本的算法回放一次真实的跟随日志，
+/// `OpenSpeech --replay <session.jsonl>`：用当前版本的算法回放一次真实的跟随日志，
 /// 打印跳转统计，方便对比调参前后的效果。
 enum ReplayTool {
     static func run(path: String) {

@@ -1,6 +1,6 @@
-# OpenPitch
+# OpenSpeech
 
-![version](https://img.shields.io/badge/version-0.1.0-blue) ![platform](https://img.shields.io/badge/platform-macOS%2014%2B-lightgrey) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.2.0-blue) ![platform](https://img.shields.io/badge/platform-macOS%2014%2B-lightgrey) ![license](https://img.shields.io/badge/license-MIT-green)
 
 [English](README.md) · [版本日志](CHANGELOG.md)
 
@@ -14,7 +14,7 @@
 - **跟着你的声音走**：本机语音识别实时判断你讲到哪，支持中文、英文、中英混排。
 - **自由发挥不乱跳**：你脱稿时它停住等你；只有你真的一路念过来了，它才往前走。
 - **识别器认识你的稿子**：每篇稿子都会自动生成一个专属语言模型交给识别器（macOS 14+），人名、专有名词、中英混排的术语更不容易听错。
-- **按看镜头的角度摆放**：刘海里一个小状态岛 + 镜头下方几度的悬浮稿件卡片，5 个位置预设，可以直接拖动调整。
+- **按看镜头的角度摆放**：默认放在摄像头正下方约 5°；两种样式（玻璃卡片 / 字幕胶囊）；可以随意拖动（靠近镜头中线自动吸附）、拖四个角调大小，双击回到默认位置，每块屏幕各自记住。
 - **智能匀速模式**：按你的语速滚动，你一停嘴它就停。
 - 共享屏幕时隐藏（大多数软件中有效）、全局快捷键、导入 txt / md / docx / pdf / rtf，也可以把文件直接拖到刘海上。
 
@@ -27,7 +27,7 @@
 
 ```bash
 ./build.sh
-open build/OpenPitch.app
+open build/OpenSpeech.app
 ```
 
 第一次使用时允许**麦克风**和**语音识别**权限。目前用的是本地签名，每次重新编译后系统可能会再问一次。
@@ -39,14 +39,13 @@ open build/OpenPitch.app
 | `⌥⌘P` | 开始 / 暂停 / 继续 |
 | `⌥⌘↑` `⌥⌘↓` | 上一行 / 下一行（也可以在提词上双指滑动） |
 | `⌥⌘←` `⌥⌘→` | 匀速模式下减速 / 加速 |
-| `⌥⌘1`…`⌥⌘5` | 切换位置预设 |
 | `⌥⌘.` | 结束 |
 
 稿件标记：`【…】` / `[…]` 写表演提示（念不念都行），`**…**` 标出要重读的词。
 
 ## 隐私
 
-所有处理都在你的 Mac 上完成。跟随日志（用于调优）只存在 `~/Library/Application Support/OpenPitch/logs/`，可以在设置里关掉。
+所有处理都在你的 Mac 上完成。跟随日志（用于调优）只存在 `~/Library/Application Support/OpenSpeech/logs/`，可以在设置里关掉。
 
 ## 开发
 

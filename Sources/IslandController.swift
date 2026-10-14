@@ -43,6 +43,11 @@ struct ScreenGeo: Equatable {
     func degrees(forY y: CGFloat, distanceCM: Double) -> Double {
         atan(Double((y - cameraY) * mmPerPt) / (distanceCM * 10)) * 180 / .pi
     }
+
+    /// 水平偏离中线 dx pt 对应多少度
+    func degrees(forDX dx: CGFloat, distanceCM: Double) -> Double {
+        atan(Double(dx * mmPerPt) / (distanceCM * 10)) * 180 / .pi
+    }
 }
 
 final class IslandModel: ObservableObject {
@@ -52,29 +57,80 @@ final class IslandModel: ObservableObject {
     @Published var cardHovering = false
     @Published var dropTargeted = false
     @Published var flash: String?
-    var panelWidth: CGFloat = IslandController.panelWidth
+    /// 正在拖动卡片：拖动中的位置（松手才保存）
+    @Published var dragPos: CardPosition?
+    /// 正在拖角调大小
+    @Published var resizing = false
+    /// 当前屏幕的标识（位置按屏幕分别记住）
+    var screenKey = ""
+    var panelSize = CGSize(width: 1100, height: 800)
     /// 离屏渲染截图时用纯色代替毛玻璃
     var snapshot = false
+
+    var dragging: Bool { dragPos != nil || resizing }
 }
 
 struct IslandLayout: Equatable {
     var island: CGSize
-    /// 悬浮稿件卡片，坐标以面板左上角为原点
+    /// 提词卡片，坐标以面板左上角为原点
     var card: CGRect?
+    /// 卡片下方的悬停控制条
+    var controls: CGRect?
+    /// 卡片在摄像头中线上（显示悬挂细线）
+    var centered = false
 }
 
 enum IslandMetrics {
     static let peekWidth: CGFloat = 470
     static let compactSide: CGFloat = 156
-    static let cardHPad: CGFloat = 30
-    static let cardTop: CGFloat = 16
-    static let cardBottom: CGFloat = 20
+    static let controlsSize = CGSize(width: 176, height: 40)
+
+    /// 卡片尺寸，以及正在读的那一行的中心离卡片顶边多远
+    static func cardSize(_ s: PrompterSettings) -> (size: CGSize, readOffset: CGFloat) {
+        let lh = PrompterLayout.lineHeight(s.displayFontSize)
+        switch s.displayStyle {
+        case .glass:
+            let anchor: CGFloat = s.visibleLines >= 3 ? 1 : 0
+            return (CGSize(width: s.textWidth + 2 * GlassCard.hPad,
+                           height: GlassCard.top + CGFloat(s.visibleLines) * lh + GlassCard.bottom),
+                    GlassCard.top + anchor * lh + lh / 2)
+        case .caption:
+            return (CGSize(width: s.textWidth + 2 * CaptionCard.hPad,
+                           height: CaptionCard.top + lh * (1 + CaptionCard.nextScale) + CaptionCard.bottom),
+                    CaptionCard.top + lh / 2)
+        }
+    }
+
+    /// 默认位置：摄像头正下方 5°
+    static func defaultPosition(_ geo: ScreenGeo) -> CardPosition {
+        CardPosition(dx: 0, readY: geo.y(forDegrees: PrompterSettings.defaultDegrees, distanceCM: PrompterSettings.viewingDistance))
+    }
+
+    /// 卡片放在屏幕里、不压住刘海和菜单栏
+    static func cardFrame(_ pos: CardPosition, settings: PrompterSettings, notch: NotchInfo, panel: CGSize) -> CGRect {
+        let (size, read) = cardSize(settings)
+        let w = min(size.width, panel.width - 40)
+        let x = min(max(panel.width / 2 + pos.dx - w / 2, 8), panel.width - w - 8)
+        let y = min(max(pos.readY - read, notch.height + 10), max(notch.height + 10, panel.height - size.height - 64))
+        return CGRect(x: x, y: y, width: w, height: size.height)
+    }
+
+    /// 把拖到屏幕外的位置收回来
+    static func clamp(_ pos: CardPosition, settings: PrompterSettings, notch: NotchInfo, panel: CGSize) -> CardPosition {
+        let f = cardFrame(pos, settings: settings, notch: notch, panel: panel)
+        return CardPosition(dx: f.midX - panel.width / 2, readY: f.minY + cardSize(settings).readOffset)
+    }
+
+    static func controlsFrame(card: CGRect, panel: CGSize) -> CGRect {
+        let s = controlsSize
+        let below = card.maxY + 10
+        let y = below + s.height + 8 > panel.height ? card.minY - 10 - s.height : below
+        return CGRect(x: card.midX - s.width / 2, y: y, width: s.width, height: s.height)
+    }
 
     static func layout(phase: IslandPhase, hovering: Bool, dropTargeted: Bool, hasToast: Bool,
-                       notch: NotchInfo, geo: ScreenGeo, settings: PrompterSettings, panelWidth: CGFloat) -> IslandLayout {
-        let lh = PrompterLayout.lineHeight(settings.fontSize)
-        let lines = CGFloat(settings.visibleLines)
-        let maxW = panelWidth - 40
+                       model: IslandModel, settings: PrompterSettings) -> IslandLayout {
+        let notch = model.notch
         if dropTargeted { return IslandLayout(island: CGSize(width: peekWidth, height: notch.height + 112)) }
         switch phase {
         case .idle:
@@ -83,30 +139,19 @@ enum IslandMetrics {
         case .finished:
             return IslandLayout(island: CGSize(width: peekWidth, height: notch.height + 96))
         case .countdown, .presenting:
-            if settings.layoutStyle == .island {
-                let w = settings.textWidth + 2 * (PrompterLayout.earRadius + PrompterLayout.sidePadding) + PrompterLayout.caretGap
-                return IslandLayout(island: CGSize(width: min(maxW, max(w, notch.width + 280, hovering ? 640 : 0)),
-                                                   height: notch.height + 6 + lines * lh + 38))
-            }
             let compactW = notch.width + 2 * compactSide
-            var island = CGSize(width: compactW, height: notch.height)
-            if hovering {
-                island = CGSize(width: max(compactW, 620), height: notch.height + 48)
-            } else if hasToast {
-                island = CGSize(width: max(compactW, 500), height: notch.height + 30)
-            }
-            let cw = min(maxW, settings.textWidth + 2 * cardHPad)
-            let ch = cardTop + lines * lh + cardBottom
-            let anchor: CGFloat = settings.visibleLines >= 3 ? 1 : 0
-            let readY = geo.y(forDegrees: settings.cardDegrees, distanceCM: settings.viewingDistance)
-            let top = max(readY - (cardTop + anchor * lh + lh / 2), notch.height + 14)
-            return IslandLayout(island: island, card: CGRect(x: (panelWidth - cw) / 2, y: top, width: cw, height: ch))
+            let island = CGSize(width: hasToast ? max(compactW, 500) : compactW, height: notch.height + (hasToast ? 30 : 0))
+            let pos = model.dragPos ?? settings.position(for: model.screenKey) ?? defaultPosition(model.geo)
+            let card = cardFrame(pos, settings: settings, notch: notch, panel: model.panelSize)
+            return IslandLayout(island: island, card: card,
+                                controls: controlsFrame(card: card, panel: model.panelSize),
+                                centered: abs(card.midX - model.panelSize.width / 2) < 0.5)
         }
     }
 
     static func layout(engine: PrompterEngine, model: IslandModel, settings: PrompterSettings) -> IslandLayout {
         layout(phase: engine.phase, hovering: model.hovering, dropTargeted: model.dropTargeted, hasToast: engine.toast != nil,
-               notch: model.notch, geo: model.geo, settings: settings, panelWidth: model.panelWidth)
+               model: model, settings: settings)
     }
 }
 
@@ -135,16 +180,15 @@ final class IslandHostingView<Content: View>: NSHostingView<Content> {
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }
 
-/// 管理刘海上的透明大面板：定位、鼠标穿透、悬停检测、触控板滚动翻行。
+/// 管理覆盖整块屏幕的透明面板：定位、鼠标穿透（只有刘海和卡片会拦鼠标）、悬停检测、触控板滚动翻行。
 final class IslandController {
-    static let panelWidth: CGFloat = 1100
-
     let panel = IslandPanel()
     let model = IslandModel()
     private let engine: PrompterEngine
     private let settings: PrompterSettings
     private var mouseTimer: Timer?
     private var leaveWork: DispatchWorkItem?
+    private var cardLeaveWork: DispatchWorkItem?
     private var flashWork: DispatchWorkItem?
     private var scrollAccum: CGFloat = 0
     private var scrollMonitor: Any?
@@ -156,7 +200,7 @@ final class IslandController {
 
         let root = IslandRootView(model: model, engine: engine, store: store, settings: settings, actions: actions)
         let host = IslandHostingView(rootView: root)
-        host.frame = CGRect(x: 0, y: 0, width: Self.panelWidth, height: 800)
+        host.frame = CGRect(origin: .zero, size: model.panelSize)
         host.autoresizingMask = [.width, .height]
         panel.contentView = host
         engine.attachDisplay(to: host)
@@ -168,7 +212,7 @@ final class IslandController {
         settings.$hideFromCapture
             .sink { [weak self] hide in self?.panel.sharingType = hide ? .none : .readOnly }
             .store(in: &bag)
-        settings.$screenChoice.dropFirst()
+        settings.$screenID.dropFirst()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in self?.reposition() }
             .store(in: &bag)
@@ -191,21 +235,30 @@ final class IslandController {
         DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: w)
     }
 
-    private func targetScreen() -> NSScreen? {
-        switch settings.screenChoice {
-        case .auto: return NSScreen.screens.first { $0.safeAreaInsets.top > 0 } ?? NSScreen.screens.first
-        case .primary: return NSScreen.screens.first
+    static func targetScreen(_ settings: PrompterSettings) -> NSScreen? {
+        if !settings.screenID.isEmpty, let s = NSScreen.screens.first(where: { ScreenKey.of($0) == settings.screenID }) {
+            return s
+        }
+        return NSScreen.screens.first { $0.safeAreaInsets.top > 0 } ?? NSScreen.screens.first
+    }
+
+    /// 回到默认位置（当前屏幕）
+    func resetPosition() {
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.82)) {
+            settings.setPosition(nil, for: model.screenKey)
         }
     }
 
     func reposition() {
-        guard let screen = targetScreen() else { return }
-        let (info, centerX) = NotchInfo.of(screen)
+        guard let screen = Self.targetScreen(settings) else { return }
+        let (info, _) = NotchInfo.of(screen)
         model.notch = info
         model.geo = ScreenGeo.of(screen, notch: info)
-        // 面板和屏幕一样高（透明部分不拦鼠标），卡片放多低都装得下
-        let w = Self.panelWidth, h = screen.frame.height
-        panel.setFrame(NSRect(x: centerX - w / 2, y: screen.frame.maxY - h, width: w, height: h), display: true)
+        model.screenKey = ScreenKey.of(screen)
+        // 面板盖住整块屏幕（透明部分不拦鼠标），卡片拖到哪都装得下；刘海总在屏幕顶部正中
+        model.panelSize = screen.frame.size
+        panel.setFrame(screen.frame, display: true)
+        model.objectWillChange.send()
     }
 
     private func pollMouse() {
@@ -213,6 +266,7 @@ final class IslandController {
         let layout = IslandMetrics.layout(engine: engine, model: model, settings: settings)
         let size = layout.island
         let f = panel.frame
+        func global(_ r: CGRect) -> CGRect { CGRect(x: f.minX + r.minX, y: f.maxY - r.maxY, width: r.width, height: r.height) }
         var rect = CGRect(x: f.midX - size.width / 2, y: f.maxY - size.height, width: size.width, height: size.height)
         if engine.phase == .idle && !model.hovering && !model.dropTargeted {
             // 收起时热区稍微放大一点，更容易“碰”到刘海
@@ -223,10 +277,24 @@ final class IslandController {
         let inside = rect.contains(p)
         var inCard = false
         if let c = layout.card {
-            inCard = CGRect(x: f.minX + c.minX, y: f.maxY - c.maxY, width: c.width, height: c.height).contains(p)
+            // 四个角的拖柄在卡片外面一点；悬停时把下方控制条也算进来，鼠标移过去不会消失
+            var area = c.insetBy(dx: -14, dy: -14)
+            if model.cardHovering, let ctl = layout.controls { area = area.union(ctl.insetBy(dx: -6, dy: -6)) }
+            inCard = global(area).contains(p)
         }
-        if model.cardHovering != inCard { model.cardHovering = inCard }
-        let interactive = inside || inCard
+        if inCard || model.dragging {
+            cardLeaveWork?.cancel()
+            cardLeaveWork = nil
+            if !model.cardHovering { model.cardHovering = true }
+        } else if model.cardHovering && cardLeaveWork == nil {
+            let w = DispatchWorkItem { [weak self] in
+                self?.model.cardHovering = false
+                self?.cardLeaveWork = nil
+            }
+            cardLeaveWork = w
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: w)
+        }
+        let interactive = inside || inCard || model.dragging
         if panel.ignoresMouseEvents == interactive { panel.ignoresMouseEvents = !interactive }
 
         if inside {

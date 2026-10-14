@@ -7,7 +7,7 @@ import Speech
 /// 同时生成识别提示词（contextualStrings）作为补充。
 enum ScriptLanguageModel {
     static let directory: URL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        .appendingPathComponent("OpenPitch/lm", isDirectory: true)
+        .appendingPathComponent("OpenSpeech/lm", isDirectory: true)
 
     /// 准备好后回调（主线程）：成功给出配置；失败给出原因（识别仍可正常进行，只是没有专属模型）
     static func prepare(script: String, localeID: String,
@@ -32,7 +32,7 @@ enum ScriptLanguageModel {
                 try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
                 if !FileManager.default.fileExists(atPath: asset.path) {
                     let data = SFCustomLanguageModelData(locale: Locale(identifier: localeID),
-                                                         identifier: "app.openpitch.script", version: tag)
+                                                         identifier: "app.openspeech.script", version: tag)
                     for p in phrases { data.insert(phraseCount: p) }
                     try await data.export(to: asset)
                 }
@@ -40,7 +40,7 @@ enum ScriptLanguageModel {
                 await MainActor.run { completion(nil, "生成失败：\(error.localizedDescription)") }
                 return
             }
-            SFSpeechLanguageModel.prepareCustomLanguageModel(for: asset, clientIdentifier: "app.openpitch.mac",
+            SFSpeechLanguageModel.prepareCustomLanguageModel(for: asset, clientIdentifier: "app.openspeech.mac",
                                                              configuration: config) { err in
                 let secs = String(format: "%.1fs", Date().timeIntervalSince(t0))
                 DispatchQueue.main.async {

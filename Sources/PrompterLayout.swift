@@ -8,8 +8,6 @@ struct PrompterLine {
 /// 自己做折行：保证每一行在灵动岛里正好一行，并且知道每个字落在哪一行（用来滚动）。
 enum PrompterLayout {
     static let earRadius: CGFloat = 10
-    static let sidePadding: CGFloat = 26
-    static let caretGap: CGFloat = 14
 
     static func font(_ size: Double) -> NSFont { .systemFont(ofSize: CGFloat(size), weight: .medium) }
     static func lineHeight(_ size: Double) -> CGFloat { (CGFloat(size) * 1.48).rounded() }
@@ -65,7 +63,13 @@ enum PrompterLayout {
             }
             var j = i + 1
             if ScriptChar.isLatinWord(c) {
-                while j < g.count && ScriptChar.isLatinWord(g[j].char) { j += 1 }
+                while j < g.count {
+                    if ScriptChar.isLatinWord(g[j].char) { j += 1; continue }
+                    // 数字里的小数点 / 千分位（6.9、f/1.48、10,999）不拆开
+                    if j + 1 < g.count, ".,/".contains(g[j].char), g[j - 1].char.isNumber || g[j + 1].char.isNumber,
+                       ScriptChar.isLatinWord(g[j + 1].char) { j += 2; continue }
+                    break
+                }
             }
             var w: CGFloat = 0
             for k in i..<j { w += width(g[k].char) }

@@ -3,14 +3,14 @@ import UniformTypeIdentifiers
 
 struct LibraryActions {
     var start: () -> Void
-    var preview: () -> Void
-    var applyPreset: (PlacementPreset) -> Void
     var newScript: () -> Void
     var importPanel: () -> Void
-    var pasteNew: () -> Void
     var importURLs: ([URL]) -> Void
+    var chooseStyle: (DisplayStyle) -> Void
+    var resetPosition: () -> Void
 }
 
+/// 主窗口：左边稿件列表 · 中间编辑 · 右边只放 6 项设置
 struct LibraryView: View {
     @ObservedObject var store: ScriptStore
     @ObservedObject var settings: PrompterSettings
@@ -19,20 +19,11 @@ struct LibraryView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            Sidebar(store: store, actions: actions).frame(width: 240)
-            Rectangle().fill(Color.white.opacity(0.06)).frame(width: 1)
+            Sidebar(store: store, settings: settings, actions: actions).frame(width: 250)
             EditorPane(store: store, settings: settings, actions: actions)
-            Rectangle().fill(Color.white.opacity(0.06)).frame(width: 1)
-            SettingsPane(settings: settings, actions: actions).frame(width: 300)
+            SettingsPane(settings: settings, actions: actions).frame(width: 270)
         }
-        .background(
-            ZStack {
-                LinearGradient(colors: [Color(hex: 0x101019), Color(hex: 0x08080C)], startPoint: .top, endPoint: .bottom)
-                RadialGradient(colors: [Theme.indigo.opacity(0.16), .clear], center: .topTrailing, startRadius: 0, endRadius: 520)
-                RadialGradient(colors: [Theme.mint.opacity(0.06), .clear], center: .bottomLeading, startRadius: 0, endRadius: 420)
-            }
-            .ignoresSafeArea()
-        )
+        .background(Color(hex: 0x16161C).ignoresSafeArea())
         .overlay {
             if dropTargeted {
                 RoundedRectangle(cornerRadius: 18)
@@ -57,40 +48,33 @@ struct LibraryView: View {
             }
             return true
         }
-        .frame(minWidth: 1020, minHeight: 620)
+        .frame(minWidth: 900, minHeight: 560)
         .preferredColorScheme(.dark)
     }
 }
 
-// MARK: - Sidebar
+// MARK: - 左：稿件列表
 
 private struct Sidebar: View {
     @ObservedObject var store: ScriptStore
+    @ObservedObject var settings: PrompterSettings
     let actions: LibraryActions
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 10) {
-                AppGlyph(size: 34)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("OpenPitch").font(.system(size: 16, weight: .bold, design: .rounded))
-                    Text("刘海里的口播提词器").font(.system(size: 11)).foregroundColor(.secondary)
-                }
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 4) {
+                Text("OpenSpeech").font(.system(size: 17, weight: .bold, design: .rounded))
+                Spacer()
+                IconButton(icon: "plus", help: "新建稿件（⌘N）", action: actions.newScript)
+                IconButton(icon: "square.and.arrow.down", help: "导入文件（⌘O），也可以直接拖进窗口", action: actions.importPanel)
             }
-            .padding(.top, 44)
-
-            HStack(spacing: 6) {
-                SideButton(icon: "square.and.pencil", title: "新建", action: actions.newScript)
-                SideButton(icon: "square.and.arrow.down", title: "导入", action: actions.importPanel)
-                SideButton(icon: "doc.on.clipboard", title: "粘贴", action: actions.pasteNew)
-            }
-
-            Text("我的稿件").font(.system(size: 11, weight: .semibold)).foregroundColor(.secondary).padding(.top, 4)
+            .padding(.top, 40)
+            .padding(.horizontal, 6)
 
             ScrollView {
-                LazyVStack(spacing: 4) {
+                LazyVStack(spacing: 2) {
                     ForEach(store.scripts) { s in
-                        ScriptRow(script: s, selected: s.id == store.selectedID)
+                        ScriptRow(script: s, speed: settings.targetSpeed, selected: s.id == store.selectedID)
                             .onTapGesture { store.selectedID = s.id }
                             .contextMenu {
                                 Button("删除", role: .destructive) { store.delete(s.id) }
@@ -98,46 +82,34 @@ private struct Sidebar: View {
                     }
                 }
             }
-
-            VStack(alignment: .leading, spacing: 6) {
-                Label("拖进来就能导入", systemImage: "hand.draw.fill").font(.system(size: 11.5, weight: .semibold))
-                Text("把文件拖进这个窗口，或者直接拖到屏幕顶部的刘海上。")
-                    .font(.system(size: 11)).foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(0.04)))
-            .padding(.bottom, 16)
         }
-        .padding(.horizontal, 14)
-        .background(Color.black.opacity(0.18))
+        .padding(.horizontal, 12)
+        .padding(.bottom, 12)
+        .background(Color(hex: 0x111116))
     }
 }
 
-private struct SideButton: View {
+private struct IconButton: View {
     let icon: String
-    let title: String
+    let help: String
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 4) {
-                Image(systemName: icon).font(.system(size: 13, weight: .semibold))
-                Text(title).font(.system(size: 10.5, weight: .medium))
-            }
-            .foregroundColor(.white.opacity(0.85))
-            .frame(maxWidth: .infinity)
-            .frame(height: 46)
-            .background(RoundedRectangle(cornerRadius: 10).fill(Color.white.opacity(0.06)))
-            .contentShape(Rectangle())
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.white.opacity(0.6))
+                .frame(width: 26, height: 26)
+                .contentShape(Rectangle())
         }
         .buttonStyle(PressStyle())
+        .help(help)
     }
 }
 
 private struct ScriptRow: View {
     let script: Script
+    let speed: Double
     let selected: Bool
 
     var body: some View {
@@ -146,26 +118,19 @@ private struct ScriptRow: View {
             Text(script.title.isEmpty ? "未命名稿件" : script.title)
                 .font(.system(size: 13, weight: .semibold))
                 .lineLimit(1)
-            Text(script.body.replacingOccurrences(of: "\n", with: " "))
+            Text(stats.units == 0 ? stats.countText : "\(stats.countText) · 约 \(Fmt.clock(stats.duration(speed: speed)))")
                 .font(.system(size: 11))
-                .foregroundColor(.secondary)
-                .lineLimit(1)
-            Text("\(stats.countText) · \(script.updatedAt.formatted(.relative(presentation: .named)))")
-                .font(.system(size: 10))
-                .foregroundColor(.white.opacity(0.35))
+                .foregroundColor(.white.opacity(0.45))
         }
         .padding(.vertical, 9)
         .padding(.horizontal, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 10).fill(selected ? Color.white.opacity(0.09) : .clear))
-        .overlay(alignment: .leading) {
-            if selected { Capsule().fill(Theme.accent).frame(width: 3, height: 24) }
-        }
+        .background(RoundedRectangle(cornerRadius: 9).fill(selected ? Color.white.opacity(0.08) : .clear))
         .contentShape(Rectangle())
     }
 }
 
-// MARK: - Editor
+// MARK: - 中：编辑
 
 private struct EditorPane: View {
     @ObservedObject var store: ScriptStore
@@ -188,61 +153,51 @@ private struct EditorPane: View {
     var body: some View {
         if let b = binding {
             let stats = ScriptStats(b.wrappedValue.body)
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 10) {
                 TextField("稿件标题", text: b.title)
                     .textFieldStyle(.plain)
-                    .font(.system(size: 26, weight: .bold))
+                    .font(.system(size: 24, weight: .bold))
 
-                HStack(spacing: 8) {
-                    StatChip(icon: "character.cursor.ibeam", text: stats.countText)
-                    StatChip(icon: "clock", text: "约 \(Fmt.clock(stats.duration(speed: settings.targetSpeed)))")
-                    StatChip(icon: "globe", text: stats.isLatin ? "English" : "中文")
-                    if stats.cues > 0 { StatChip(icon: "theatermasks.fill", text: "\(stats.cues) 处导演提示") }
+                HStack(spacing: 6) {
+                    Text("\(stats.countText) · 约 \(Fmt.clock(stats.duration(speed: settings.targetSpeed))) · \(stats.isLatin ? "English" : "中文")"
+                         + (stats.cues > 0 ? " · \(stats.cues) 处提示" : ""))
+                    Image(systemName: "questionmark.circle")
+                        .help("【停顿】【看镜头】写导演提示：显示成橙色，不用念，跟读时自动跳过。\n**重点** 标出要重读的词。")
                 }
+                .font(.system(size: 12))
+                .foregroundColor(.white.opacity(0.45))
 
                 TextEditor(text: b.body)
                     .font(.system(size: 15))
-                    .lineSpacing(5)
+                    .lineSpacing(6)
                     .scrollContentBackground(.hidden)
                     .padding(14)
-                    .background(RoundedRectangle(cornerRadius: 14).fill(Color.white.opacity(0.04)))
-                    .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.white.opacity(0.08)))
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(0.04)))
+                    .padding(.top, 6)
 
-                HStack(spacing: 6) {
-                    Image(systemName: "lightbulb.fill").foregroundColor(Theme.amber)
-                    Text("用 ")
-                        + Text("【停顿】【看镜头】").foregroundColor(Theme.cue)
-                        + Text(" 写导演提示（不用念，跟读时自动跳过）；用 ")
-                        + Text("**重点**").foregroundColor(Theme.emphasis)
-                        + Text(" 标出要重读的词。")
-                }
-                .font(.system(size: 11.5))
-                .foregroundColor(.secondary)
-
-                HStack(spacing: 14) {
+                HStack(spacing: 12) {
                     Button(action: actions.start) {
                         HStack(spacing: 8) {
                             Image(systemName: "play.fill")
-                            Text("在灵动岛开始提词")
+                            Text("开始提词")
                         }
                         .font(.system(size: 14, weight: .bold))
                         .foregroundColor(.black)
-                        .padding(.horizontal, 24)
-                        .frame(height: 42)
+                        .padding(.horizontal, 26)
+                        .frame(height: 40)
                         .background(Capsule().fill(Theme.accent))
-                        .shadow(color: Theme.indigo.opacity(0.5), radius: 16, y: 4)
+                        .shadow(color: Theme.indigo.opacity(0.45), radius: 14, y: 4)
                     }
                     .buttonStyle(PressStyle())
                     .keyboardShortcut(.return, modifiers: .command)
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("⌘↩ 或 ⌥⌘P 开始").font(.system(size: 11.5, weight: .medium))
-                        Text("提词时可以切到任何 App，快捷键全局有效").font(.system(size: 11)).foregroundColor(.secondary)
-                    }
+                    Text("⌥⌘P").font(.system(size: 11.5, weight: .medium)).foregroundColor(.white.opacity(0.4))
+                        .help("在任何 App 里按 ⌥⌘P 开始 / 暂停")
                     Spacer()
                 }
+                .padding(.top, 6)
             }
-            .padding(.horizontal, 28)
+            .padding(.horizontal, 26)
             .padding(.top, 40)
             .padding(.bottom, 22)
         } else {
@@ -260,320 +215,126 @@ private struct EditorPane: View {
     }
 }
 
-private struct StatChip: View {
-    let icon: String
-    let text: String
-
-    var body: some View {
-        HStack(spacing: 5) {
-            Image(systemName: icon).font(.system(size: 10.5, weight: .semibold))
-            Text(text)
-        }
-        .font(.system(size: 11.5, weight: .medium))
-        .foregroundColor(.white.opacity(0.7))
-        .padding(.horizontal, 10)
-        .frame(height: 24)
-        .background(Capsule().fill(Color.white.opacity(0.06)))
-    }
-}
-
-// MARK: - Settings
+// MARK: - 右：设置
 
 private struct SettingsPane: View {
     @ObservedObject var settings: PrompterSettings
     let actions: LibraryActions
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                SectionTitle(text: "提词模式")
-                VStack(spacing: 8) {
-                    ForEach(PrompterMode.allCases) { m in
-                        ModeCard(mode: m, selected: settings.mode == m) { settings.mode = m }
+        VStack(alignment: .leading, spacing: 22) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("显示样式").font(.system(size: 11.5, weight: .semibold)).foregroundColor(.white.opacity(0.45))
+                HStack(spacing: 10) {
+                    ForEach(DisplayStyle.allCases) { st in
+                        StyleThumb(style: st, selected: settings.displayStyle == st) { actions.chooseStyle(st) }
                     }
-                }
-
-                SectionTitle(text: "语速")
-                SliderRow(title: "目标语速", value: $settings.targetSpeed, range: 120...360, step: 10,
-                          display: "\(Int(settings.targetSpeed)) 字/分")
-                Text("跟读模式：用来提示你“偏快 / 偏慢”。匀速模式：就是滚动速度。英文稿自动按约 60% 换算成 词/分。")
-                    .font(.system(size: 11)).foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                HStack {
-                    SectionTitle(text: "位置与尺寸")
-                    Spacer()
-                    Text(settings.activePreset.map { "当前：预设 \($0.letter)" } ?? "当前：自定义")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(Theme.mint)
-                }
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
-                    ForEach(PlacementPreset.all) { p in
-                        PresetCard(preset: p, selected: settings.activePreset == p) { actions.applyPreset(p) }
-                    }
-                }
-                Button(action: actions.preview) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "eye")
-                        Text("预览位置（不开麦）")
-                    }
-                    .font(.system(size: 12.5, weight: .semibold))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 32)
-                    .background(RoundedRectangle(cornerRadius: 9).fill(Color.white.opacity(0.08)))
-                    .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(Color.white.opacity(0.1)))
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(PressStyle())
-                Text("预览时可以直接拖动卡片调高度；在任何地方按 ⌥⌘1–5 切换预设，⌥⌘P 正式开始。")
-                    .font(.system(size: 11)).foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Picker("", selection: $settings.layoutStyle) {
-                    ForEach(LayoutStyle.allCases) { Text($0.title).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                if settings.layoutStyle == .card {
-                    SliderRow(title: "离镜头", value: $settings.cardDegrees, range: 0...14, step: 0.5,
-                              display: String(format: "%.1f° · %.1f cm", settings.cardDegrees,
-                                              settings.viewingDistance * tan(settings.cardDegrees * .pi / 180)))
-                    HStack {
-                        Text("对齐").font(.system(size: 12.5))
-                        Spacer()
-                        Picker("", selection: $settings.cardAlign) {
-                            ForEach(TextAlign.allCases) { Text($0.title).tag($0) }
-                        }
-                        .pickerStyle(.segmented)
-                        .labelsHidden()
-                        .frame(width: 140)
-                    }
-                }
-                SliderRow(title: "每行字数", value: Binding(get: { Double(settings.lineChars) }, set: { settings.lineChars = Int($0) }),
-                          range: 8...30, step: 1, display: "约 \(settings.lineChars) 字")
-                SliderRow(title: "字号", value: $settings.fontSize, range: 16...36, step: 1, display: "\(Int(settings.fontSize)) pt")
-                HStack {
-                    Text("显示行数").font(.system(size: 12.5))
-                    Spacer()
-                    Picker("", selection: $settings.visibleLines) {
-                        ForEach(1...5, id: \.self) { Text("\($0)").tag($0) }
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .frame(width: 170)
-                }
-                SliderRow(title: "你离屏幕", value: $settings.viewingDistance, range: 35...90, step: 5,
-                          display: "\(Int(settings.viewingDistance)) cm")
-                Text("用来把“度”换算成屏幕上的位置。笔记本放桌上一般是 50–60 cm。")
-                    .font(.system(size: 11)).foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                SectionTitle(text: "细节")
-                VStack(alignment: .leading, spacing: 10) {
-                    Toggle("开始前 3 秒倒计时", isOn: $settings.countdown)
-                    Toggle("匀速模式：不说话时自动停住", isOn: $settings.pauseOnSilence)
-                    Toggle("录屏 / 共享屏幕时隐藏提词器", isOn: $settings.hideFromCapture)
-                    Toggle("记录跟随日志（只存本机，用于调优）", isOn: $settings.trackingLog)
-                    Toggle("保存测试录音（只存本机，用于对比识别效果）", isOn: $settings.saveAudio)
-                        .disabled(!settings.trackingLog)
-                }
-                .toggleStyle(.switch)
-                .controlSize(.small)
-                .font(.system(size: 12.5))
-                HStack {
-                    Text("显示在").font(.system(size: 12.5))
-                    Spacer()
-                    Picker("", selection: $settings.screenChoice) {
-                        ForEach(ScreenChoice.allCases) { Text($0.title).tag($0) }
-                    }
-                    .labelsHidden()
-                    .frame(width: 170)
-                }
-
-                SectionTitle(text: "全局快捷键")
-                VStack(spacing: 7) {
-                    ShortcutRow(keys: "⌥⌘P", text: "开始 / 暂停 / 继续")
-                    ShortcutRow(keys: "⌥⌘↑  ⌥⌘↓", text: "上一行 / 下一行")
-                    ShortcutRow(keys: "⌥⌘←  ⌥⌘→", text: "匀速 减速 / 加速")
-                    ShortcutRow(keys: "⌥⌘.", text: "结束提词")
-                    ShortcutRow(keys: "⌥⌘1 … ⌥⌘5", text: "切换位置预设 A–E")
-                    ShortcutRow(keys: "双指滑动", text: "在灵动岛上手动翻行")
                 }
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 44)
-            .padding(.bottom, 24)
-        }
-        .background(Color.black.opacity(0.12))
-    }
-}
 
-private struct SectionTitle: View {
-    let text: String
-    var body: some View {
-        Text(text).font(.system(size: 11, weight: .bold)).foregroundColor(.white.opacity(0.45)).textCase(.uppercase)
-    }
-}
-
-private struct ModeCard: View {
-    let mode: PrompterMode
-    let selected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(alignment: .top, spacing: 12) {
-                ZStack {
-                    Circle().fill(selected ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(Color.white.opacity(0.08)))
-                        .frame(width: 34, height: 34)
-                    Image(systemName: mode.icon)
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(selected ? .black : .white.opacity(0.8))
-                }
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 6) {
-                        Text(mode.title).font(.system(size: 13.5, weight: .semibold))
-                        if mode == .voice {
-                            Text("推荐").font(.system(size: 9.5, weight: .bold)).foregroundColor(.black)
-                                .padding(.horizontal, 5).padding(.vertical, 1.5)
-                                .background(Capsule().fill(Theme.mint))
-                        }
-                    }
-                    Text(mode.detail).font(.system(size: 11.5)).foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .multilineTextAlignment(.leading)
-                }
-                Spacer(minLength: 0)
-            }
-            .padding(12)
-            .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(selected ? 0.07 : 0.025)))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .strokeBorder(selected ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(Color.white.opacity(0.08)),
-                                  lineWidth: selected ? 1.5 : 1)
-            )
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-private struct SliderRow: View {
-    let title: String
-    @Binding var value: Double
-    let range: ClosedRange<Double>
-    let step: Double
-    let display: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(title).font(.system(size: 12.5))
+            HStack(spacing: 10) {
+                Text("字号").font(.system(size: 13))
                 Spacer()
-                Text(display).font(.system(size: 12, weight: .semibold, design: .rounded)).monospacedDigit()
-                    .foregroundColor(Theme.mint)
+                Image(systemName: "textformat.size.smaller").font(.system(size: 10)).foregroundColor(.white.opacity(0.45))
+                Slider(value: Binding(get: { settings.fontSize }, set: { settings.fontSize = $0.rounded() }), in: 16...36).controlSize(.small).tint(Theme.indigo).frame(width: 110)
+                Image(systemName: "textformat.size.larger").font(.system(size: 12)).foregroundColor(.white.opacity(0.45))
             }
-            Slider(value: $value, in: range, step: step).controlSize(.small).tint(Theme.indigo)
+            .help("\(Int(settings.fontSize)) pt")
+
+            SwitchRow(title: "共享屏幕时隐藏", isOn: $settings.hideFromCapture)
+                .help("录屏、共享屏幕时对方看不到提词器")
+            SwitchRow(title: "开始前倒计时", isOn: $settings.countdown)
+
+            HStack {
+                Text("显示在").font(.system(size: 13))
+                Spacer()
+                Picker("", selection: $settings.screenID) {
+                    Text("自动").tag("")
+                    ForEach(NSScreen.screens, id: \.self) { s in
+                        Text(s.localizedName).tag(ScreenKey.of(s))
+                    }
+                }
+                .labelsHidden()
+                .frame(width: 140)
+            }
+
+            Button(action: actions.resetPosition) {
+                HStack(spacing: 6) {
+                    Image(systemName: "scope")
+                    Text("回到默认位置")
+                }
+                .font(.system(size: 12.5, weight: .semibold))
+                .foregroundColor(.white.opacity(0.9))
+                .frame(maxWidth: .infinity)
+                .frame(height: 34)
+                .background(RoundedRectangle(cornerRadius: 9).fill(Color.white.opacity(0.07)))
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(PressStyle())
+            .help("摄像头正下方。也可以直接双击提词卡片")
+
+            Spacer()
         }
+        .padding(.horizontal, 20)
+        .padding(.top, 44)
+        .padding(.bottom, 20)
     }
 }
 
-private struct ShortcutRow: View {
-    let keys: String
-    let text: String
+private struct SwitchRow: View {
+    let title: String
+    @Binding var isOn: Bool
 
     var body: some View {
         HStack {
-            Text(keys)
-                .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                .padding(.horizontal, 7)
-                .frame(height: 20)
-                .background(RoundedRectangle(cornerRadius: 5).fill(Color.white.opacity(0.08)))
+            Text(title).font(.system(size: 13))
             Spacer()
-            Text(text).font(.system(size: 11.5)).foregroundColor(.secondary)
+            Toggle("", isOn: $isOn).labelsHidden().toggleStyle(.switch).controlSize(.small)
         }
     }
 }
 
-// MARK: - 位置预设卡片
-
-private struct PresetCard: View {
-    let preset: PlacementPreset
+/// 两种显示样式的缩略图
+private struct StyleThumb: View {
+    let style: DisplayStyle
     let selected: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 6) {
-                PresetThumbnail(preset: preset)
-                    .frame(height: 50)
-                HStack(spacing: 4) {
-                    Text(preset.letter).font(.system(size: 12, weight: .heavy, design: .rounded))
-                        .foregroundStyle(selected ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(Color.white.opacity(0.8)))
-                    Text(preset.name).font(.system(size: 12, weight: .semibold)).lineLimit(1)
-                    if preset.recommended {
-                        Text("推荐").font(.system(size: 9, weight: .bold)).foregroundColor(.black)
-                            .padding(.horizontal, 4).padding(.vertical, 1)
-                            .background(Capsule().fill(Theme.mint))
-                    }
+            VStack(spacing: 7) {
+                ZStack(alignment: .top) {
+                    RoundedRectangle(cornerRadius: 9).fill(Color(hex: 0x3A3D6E))
+                    Capsule().fill(Color.black).frame(width: 30, height: 6).offset(y: -1)
+                    preview.padding(.top, 14)
                 }
-                Text(preset.detail).font(.system(size: 10)).foregroundColor(.secondary).lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
+                .frame(height: 64)
+                .overlay(RoundedRectangle(cornerRadius: 9)
+                    .strokeBorder(selected ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(Color.white.opacity(0.08)),
+                                  lineWidth: selected ? 2 : 1))
+                Text(style.title)
+                    .font(.system(size: 11.5, weight: selected ? .semibold : .regular))
+                    .foregroundColor(selected ? .white : .white.opacity(0.5))
             }
-            .padding(8)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 10).fill(Color.white.opacity(selected ? 0.08 : 0.03)))
-            .overlay(RoundedRectangle(cornerRadius: 10)
-                .strokeBorder(selected ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(Color.white.opacity(0.08)),
-                              lineWidth: selected ? 1.5 : 1))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
-}
 
-/// 预设缩略图：按大致比例画出屏幕、刘海、提词条 / 卡片的位置
-private struct PresetThumbnail: View {
-    let preset: PlacementPreset
-
-    var body: some View {
-        GeometryReader { g in
-            let w = g.size.width, h = g.size.height
-            // 以 14" 屏、55 cm 视距的比例粗略换算：每度约 0.05 × 屏高
-            let perDeg = h * 0.05
-            let textW = min(w * 0.9, w * CGFloat(preset.lineChars) / 34)
-            let lineGap = h * 0.075
-            ZStack(alignment: .top) {
-                RoundedRectangle(cornerRadius: 5).fill(Color.white.opacity(0.06))
-                RoundedRectangle(cornerRadius: 5).strokeBorder(Color.white.opacity(0.1))
-                if preset.style == .island {
-                    NotchShape(topRadius: 2, bottomRadius: 5).fill(Color.black)
-                        .frame(width: textW + 10, height: h * 0.1 + CGFloat(preset.lines) * lineGap + 6)
-                    lines(textW, gap: lineGap).padding(.top, h * 0.1 + 3)
-                } else {
-                    NotchShape(topRadius: 2, bottomRadius: 3).fill(Color.black)
-                        .frame(width: w * 0.32, height: h * 0.1)
-                    let cardH = CGFloat(preset.lines) * lineGap + 6
-                    let top = max(h * 0.14, CGFloat(preset.degrees) * perDeg - cardH / 2)
-                    Rectangle().fill(Color.white.opacity(0.2)).frame(width: 1, height: max(0, top - h * 0.1))
-                        .padding(.top, h * 0.1)
-                    RoundedRectangle(cornerRadius: 3).fill(Color.black.opacity(0.85))
-                        .overlay(RoundedRectangle(cornerRadius: 3).strokeBorder(Color.white.opacity(0.15), lineWidth: 0.5))
-                        .frame(width: textW + 8, height: cardH)
-                        .overlay(lines(textW, gap: lineGap))
-                        .padding(.top, top)
-                }
+    @ViewBuilder private var preview: some View {
+        if style == .glass {
+            VStack(spacing: 4) {
+                Capsule().fill(Color.white.opacity(0.35)).frame(width: 46, height: 2.5)
+                Capsule().fill(Theme.accent).frame(width: 56, height: 3)
+                Capsule().fill(Color.white.opacity(0.35)).frame(width: 46, height: 2.5)
             }
-        }
-    }
-
-    private func lines(_ w: CGFloat, gap: CGFloat) -> some View {
-        VStack(spacing: gap * 0.45) {
-            ForEach(0..<preset.lines, id: \.self) { i in
-                Capsule().fill(i == (preset.lines >= 3 ? 1 : 0) ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(Color.white.opacity(0.4)))
-                    .frame(width: w * (i == 0 ? 1 : 0.85), height: gap * 0.55)
-            }
+            .frame(width: 74, height: 34)
+            .background(RoundedRectangle(cornerRadius: 6).fill(Color.black.opacity(0.65)))
+        } else {
+            Capsule().fill(Theme.amber).frame(width: 40, height: 3)
+                .frame(width: 84, height: 18)
+                .background(Capsule().fill(Color.black.opacity(0.85)))
+                .padding(.top, 8)
         }
     }
 }

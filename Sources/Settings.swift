@@ -1,4 +1,4 @@
-import Foundation
+import AppKit
 import CoreGraphics
 
 enum PrompterMode: String, CaseIterable, Identifiable {
@@ -8,116 +8,109 @@ enum PrompterMode: String, CaseIterable, Identifiable {
     var title: String { self == .voice ? "语音跟读" : "智能匀速" }
     var short: String { self == .voice ? "跟读" : "匀速" }
     var icon: String { self == .voice ? "waveform" : "metronome" }
-    var detail: String {
-        self == .voice
-            ? "实时识别你讲到哪，提词自动跟上。讲快讲慢、跳句、停下来喝水，都能跟。"
-            : "按目标语速平滑滚动；检测到你停顿就自动停住，开口再继续。"
+}
+
+/// 提词的两种样式
+enum DisplayStyle: String, CaseIterable, Identifiable {
+    case glass, caption
+    var id: String { rawValue }
+    var title: String { self == .glass ? "玻璃卡片" : "字幕胶囊" }
+}
+
+/// 提词卡片的位置：正在读的那一行的中心，相对屏幕顶边中点（摄像头正下方）
+struct CardPosition: Equatable {
+    /// 水平偏离中线多少 pt（右为正）
+    var dx: CGFloat
+    /// 正在读的那一行离屏幕顶边多少 pt
+    var readY: CGFloat
+}
+
+/// 屏幕的稳定标识：用来给每块屏幕分别记住位置
+enum ScreenKey {
+    static func of(_ screen: NSScreen) -> String {
+        guard let n = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber,
+              let uuid = CGDisplayCreateUUIDFromDisplayID(CGDirectDisplayID(n.uint32Value))?.takeRetainedValue(),
+              let s = CFUUIDCreateString(nil, uuid) as String? else { return screen.localizedName }
+        return s
     }
-}
-
-enum ScreenChoice: String, CaseIterable, Identifiable {
-    case auto, primary
-    var id: String { rawValue }
-    var title: String { self == .auto ? "自动（优先刘海屏）" : "主显示器" }
-}
-
-enum LayoutStyle: String, CaseIterable, Identifiable {
-    case island, card
-    var id: String { rawValue }
-    var title: String { self == .island ? "灵动岛展开" : "刘海 + 悬浮卡片" }
-}
-
-enum TextAlign: String, CaseIterable, Identifiable {
-    case leading, center
-    var id: String { rawValue }
-    var title: String { self == .leading ? "左对齐" : "居中" }
-}
-
-/// 位置预设：用来对比哪种摆法在镜头里最自然（依据见 docs/research-teleprompter-placement.md）
-struct PlacementPreset: Identifiable, Equatable {
-    let id: Int
-    let letter: String
-    let name: String
-    let style: LayoutStyle
-    let degrees: Double
-    let lineChars: Int
-    let lines: Int
-    let fontSize: Double
-    var recommended = false
-
-    var detail: String {
-        style == .island ? "贴着刘海 · \(lineChars) 字/行 · \(lines) 行"
-                         : "镜头下 \(Self.deg(degrees)) · \(lineChars) 字/行 · \(lines) 行"
-    }
-
-    static func deg(_ d: Double) -> String { d == d.rounded() ? "\(Int(d))°" : String(format: "%.1f°", d) }
-
-    static let all: [PlacementPreset] = [
-        PlacementPreset(id: 1, letter: "A", name: "原版", style: .island, degrees: 2, lineChars: 24, lines: 3, fontSize: 22),
-        PlacementPreset(id: 2, letter: "B", name: "刘海窄行", style: .island, degrees: 2, lineChars: 14, lines: 3, fontSize: 22),
-        PlacementPreset(id: 3, letter: "C", name: "悬浮卡片", style: .card, degrees: 5, lineChars: 14, lines: 3, fontSize: 22, recommended: true),
-        PlacementPreset(id: 4, letter: "D", name: "卡片偏低", style: .card, degrees: 7, lineChars: 14, lines: 2, fontSize: 24),
-        PlacementPreset(id: 5, letter: "E", name: "卡片贴近", style: .card, degrees: 3, lineChars: 12, lines: 2, fontSize: 22),
-    ]
 }
 
 final class PrompterSettings: ObservableObject {
     private let d: UserDefaults
 
+    /// 正在读的那一行默认放在镜头下方多少度（依据见 docs/research-teleprompter-placement.md）
+    static let defaultDegrees = 5.0
+    /// 用来把“度”换算成屏幕上的位置：笔记本放桌上一般 50–60 cm
+    static let viewingDistance = 55.0
+    static let charsRange = 8...30
+    static let linesRange = 1...5
+
     @Published var mode: PrompterMode { didSet { d.set(mode.rawValue, forKey: "mode") } }
     @Published var targetSpeed: Double { didSet { d.set(targetSpeed, forKey: "targetSpeed") } }
     @Published var fontSize: Double { didSet { d.set(fontSize, forKey: "fontSize") } }
-    @Published var visibleLines: Int { didSet { d.set(visibleLines, forKey: "visibleLines") } }
-    @Published var layoutStyle: LayoutStyle { didSet { d.set(layoutStyle.rawValue, forKey: "layoutStyle") } }
-    /// 悬浮卡片：正在读的那一行在镜头下方多少度
-    @Published var cardDegrees: Double { didSet { d.set(cardDegrees, forKey: "cardDegrees") } }
-    /// 每行大约几个汉字（决定行宽）
-    @Published var lineChars: Int { didSet { d.set(lineChars, forKey: "lineChars") } }
-    /// 眼睛到屏幕的距离（厘米），用来把“度”换算成屏幕上的位置
-    @Published var viewingDistance: Double { didSet { d.set(viewingDistance, forKey: "viewingDistance") } }
-    @Published var cardAlign: TextAlign { didSet { d.set(cardAlign.rawValue, forKey: "cardAlign") } }
+    @Published var displayStyle: DisplayStyle { didSet { d.set(displayStyle.rawValue, forKey: "displayStyle") } }
+    /// 玻璃卡片：每行大约几个汉字、显示几行
+    @Published var glassChars: Int { didSet { d.set(glassChars, forKey: "glassChars") } }
+    @Published var glassLines: Int { didSet { d.set(glassLines, forKey: "glassLines") } }
+    /// 字幕胶囊：每行字数（固定显示这一句 + 下一句）
+    @Published var captionChars: Int { didSet { d.set(captionChars, forKey: "captionChars") } }
     @Published var countdown: Bool { didSet { d.set(countdown, forKey: "countdown") } }
     @Published var pauseOnSilence: Bool { didSet { d.set(pauseOnSilence, forKey: "pauseOnSilence") } }
     @Published var hideFromCapture: Bool { didSet { d.set(hideFromCapture, forKey: "hideFromCapture") } }
-    @Published var screenChoice: ScreenChoice { didSet { d.set(screenChoice.rawValue, forKey: "screenChoice") } }
+    /// 显示在哪块屏幕：空 = 自动（优先带刘海 / 摄像头的屏幕）
+    @Published var screenID: String { didSet { d.set(screenID, forKey: "screenID") } }
     @Published var trackingLog: Bool { didSet { d.set(trackingLog, forKey: "trackingLog") } }
     @Published var saveAudio: Bool { didSet { d.set(saveAudio, forKey: "saveAudio") } }
+    /// 每块屏幕各自记住的位置（两种样式共用）；没有记录 = 默认位置
+    @Published private(set) var positions: [String: CardPosition] {
+        didSet { d.set(positions.mapValues { [Double($0.dx), Double($0.readY)] }, forKey: "cardPositions") }
+    }
 
     init(defaults: UserDefaults = .standard) {
         d = defaults
-        mode = PrompterMode(rawValue: d.string(forKey: "mode") ?? "") ?? .voice
+        // 界面上只保留语音跟读；识别不可用时引擎会自己临时切到匀速
+        mode = .voice
         targetSpeed = d.object(forKey: "targetSpeed") as? Double ?? 240
         fontSize = d.object(forKey: "fontSize") as? Double ?? 22
-        visibleLines = d.object(forKey: "visibleLines") as? Int ?? 3
-        layoutStyle = LayoutStyle(rawValue: d.string(forKey: "layoutStyle") ?? "") ?? .card
-        cardDegrees = d.object(forKey: "cardDegrees") as? Double ?? 5
-        lineChars = d.object(forKey: "lineChars") as? Int ?? 14
-        viewingDistance = d.object(forKey: "viewingDistance") as? Double ?? 55
-        cardAlign = TextAlign(rawValue: d.string(forKey: "cardAlign") ?? "") ?? .center
+        displayStyle = DisplayStyle(rawValue: d.string(forKey: "displayStyle") ?? "") ?? .glass
+        glassChars = d.object(forKey: "glassChars") as? Int ?? 14
+        glassLines = d.object(forKey: "glassLines") as? Int ?? 3
+        captionChars = d.object(forKey: "captionChars") as? Int ?? 16
         countdown = d.object(forKey: "countdown") as? Bool ?? true
         pauseOnSilence = d.object(forKey: "pauseOnSilence") as? Bool ?? true
         hideFromCapture = d.object(forKey: "hideFromCapture") as? Bool ?? true
-        screenChoice = ScreenChoice(rawValue: d.string(forKey: "screenChoice") ?? "") ?? .auto
+        screenID = d.string(forKey: "screenID") ?? ""
         trackingLog = d.object(forKey: "trackingLog") as? Bool ?? true
         saveAudio = d.object(forKey: "saveAudio") as? Bool ?? false
+        var pos: [String: CardPosition] = [:]
+        for (k, v) in (d.dictionary(forKey: "cardPositions") as? [String: [Double]]) ?? [:] where v.count == 2 {
+            pos[k] = CardPosition(dx: CGFloat(v[0]), readY: CGFloat(v[1]))
+        }
+        positions = pos
     }
 
-    /// 文字区宽度（pt）：每行字数 × 字号（汉字基本是 1 em 宽）
-    var textWidth: CGFloat { CGFloat(lineChars) * CGFloat(fontSize) * 1.02 }
-
-    func apply(_ p: PlacementPreset) {
-        layoutStyle = p.style
-        if p.style == .card { cardDegrees = p.degrees }
-        lineChars = p.lineChars
-        visibleLines = p.lines
-        fontSize = p.fontSize
-    }
-
-    /// 当前设置正好等于哪个预设（手动调过就是 nil = 自定义）
-    var activePreset: PlacementPreset? {
-        PlacementPreset.all.first {
-            $0.style == layoutStyle && $0.lineChars == lineChars && $0.lines == visibleLines && $0.fontSize == fontSize
-                && ($0.style == .island || abs($0.degrees - cardDegrees) < 0.05)
+    /// 当前样式的每行字数
+    var lineChars: Int {
+        get { displayStyle == .glass ? glassChars : captionChars }
+        set {
+            let v = min(max(newValue, Self.charsRange.lowerBound), Self.charsRange.upperBound)
+            if displayStyle == .glass { glassChars = v } else { captionChars = v }
         }
     }
+
+    /// 当前样式显示几行（字幕胶囊固定 2 行：这一句 + 下一句）
+    var visibleLines: Int {
+        get { displayStyle == .glass ? glassLines : 2 }
+        set { if displayStyle == .glass { glassLines = min(max(newValue, Self.linesRange.lowerBound), Self.linesRange.upperBound) } }
+    }
+
+    /// 实际排版用的字号：字幕胶囊字更大一点
+    var displayFontSize: Double { displayStyle == .glass ? fontSize : (fontSize * 1.12).rounded() }
+
+    /// 文字区宽度（pt）：每行字数 × 字号（汉字基本是 1 em 宽）
+    var textWidth: CGFloat { CGFloat(lineChars) * CGFloat(displayFontSize) * 1.02 }
+
+    func position(for screen: String) -> CardPosition? { positions[screen] }
+
+    func setPosition(_ p: CardPosition?, for screen: String) { positions[screen] = p }
 }

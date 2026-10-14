@@ -54,7 +54,7 @@ final class SpeechEngine {
         let input = audioEngine.inputNode
         let format = input.outputFormat(forBus: 0)
         guard format.sampleRate > 0, format.channelCount > 0 else {
-            throw NSError(domain: "OpenPitch", code: 1, userInfo: [NSLocalizedDescriptionKey: "没有找到可用的麦克风"])
+            throw NSError(domain: "OpenSpeech", code: 1, userInfo: [NSLocalizedDescriptionKey: "没有找到可用的麦克风"])
         }
         let device = AVCaptureDevice.default(for: .audio)?.localizedName ?? "?"
         let thermal = ["nominal", "fair", "serious", "critical"][min(3, ProcessInfo.processInfo.thermalState.rawValue)]

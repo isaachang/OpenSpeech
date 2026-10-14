@@ -3,6 +3,26 @@
 格式参考 [Keep a Changelog](https://keepachangelog.com/)，版本号遵循 [语义化版本](https://semver.org/)。
 Format based on Keep a Changelog; versions follow Semantic Versioning.
 
+## [0.2.0] - 2026-10-14
+
+### 变更 Changed
+- 产品改名：OpenPitch → OpenSpeech。首次启动自动迁移旧的稿件库、设置、跟随日志（旧数据保留）。因为应用标识变了，系统会重新询问一次麦克风和语音识别权限。
+  Renamed from OpenPitch to OpenSpeech; scripts, settings and logs are migrated on first launch. macOS will ask for microphone and speech permissions again.
+- 界面极简化：去掉 5 个位置预设和“刘海灵动岛展开”布局，只保留两种显示样式——玻璃卡片（默认）和字幕胶囊（只显示这一句和下一句，字更大）。
+  Minimal UI: removed the 5 placement presets and the expanded-island layout; two display styles remain — glass card (default) and caption capsule.
+- 提词卡片可以随意拖动：靠近镜头中线自动吸附，拖动时显示离镜头的角度；拖四个角调整每行字数和行数；双击或点“回到默认位置”复位。位置按屏幕分别记住，两种样式共用位置、各记各的大小。
+  Free drag with centerline snap and angle readout; corner resize; double-click / button to reset; position remembered per screen.
+- 鼠标放到卡片上时，下方出现控制条：上一行 · 暂停 · 下一行 · 结束。刘海里只留状态点、计时和语速提示。
+  Hover controls below the card; the notch shows only status, timer and pace hint.
+- 主窗口改为三栏：左稿件列表，中编辑，右边只留 6 项设置（显示样式、字号、共享屏幕时隐藏、开始前倒计时、显示在哪块屏幕、回到默认位置）。跟随日志、测试录音移到“文件 › 开发者选项”。
+  Three-column main window with six settings; developer options moved to the File menu.
+
+### 修复 Fixed
+- 折行时不再把小数、型号拆开（如 “6.9”、“f/1.48”）。Numbers like “6.9” no longer break across lines.
+
+### 移除 Removed
+- 快捷键 ⌥⌘1…⌥⌘5（位置预设）。Hotkeys ⌥⌘1–5 (placement presets).
+
 ## [0.1.0] - 2026-10-14
 
 第一个公开版本。First public release.

@@ -1,7 +1,7 @@
 import AVFoundation
 import Speech
 
-/// `OpenPitch --asr-bench <输出目录>`：用系统合成语音把稿子念出来，
+/// `OpenSpeech --asr-bench <输出目录>`：用系统合成语音把稿子念出来，
 /// 同一段音频分别用“普通识别”和“加了稿子专属语言模型的识别”各跑一次，比较错字率和术语识别率。
 /// 合成声音 ≠ 真人，只用来验证方向；不用它来调参数。
 enum ASRBench {

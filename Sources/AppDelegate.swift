@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     let store = ScriptStore()
     let settings = PrompterSettings()
     lazy var engine = PrompterEngine(settings: settings)
@@ -22,7 +22,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 start: { [weak self] in self?.startSelected() },
                 openLibrary: { [weak self] in self?.showLibrary() },
                 importURLs: { [weak self] in self?.importFiles($0, fromIsland: true) },
-                cycleScript: { [weak self] in self?.store.cycleSelection($0) }
+                cycleScript: { [weak self] in self?.store.cycleSelection($0) },
+                resetPosition: { [weak self] in self?.island?.resetPosition() }
             )
         )
         registerHotKeys()
@@ -97,13 +98,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc func toggleAction() { startOrToggle() }
 
-    func applyPreset(_ p: PlacementPreset) {
-        settings.apply(p)
-        if engine.phase.isActive {
-            engine.showToast("预设 \(p.letter) · \(p.name) · \(p.detail)", duration: 2.2)
-        } else {
-            previewSelected()
-        }
+    /// 换显示样式；没在提词时顺便把稿子摆出来看看效果
+    func chooseStyle(_ st: DisplayStyle) {
+        settings.displayStyle = st
+        if !engine.phase.isActive { previewSelected() }
+    }
+
+    @objc func resetPosition() {
+        island?.resetPosition()
+        if !engine.phase.isActive { previewSelected() }
     }
 
     /// 不开麦、不滚动，直接把稿子摆出来看位置
@@ -118,6 +121,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSWorkspace.shared.open(SessionLogger.directory)
     }
     @objc func stopAction() { engine.stop() }
+    @objc func toggleTrackingLog() { settings.trackingLog.toggle() }
+    @objc func toggleSaveAudio() { settings.saveAudio.toggle() }
+
+    func validateMenuItem(_ item: NSMenuItem) -> Bool {
+        switch item.action {
+        case #selector(toggleTrackingLog): item.state = settings.trackingLog ? .on : .off
+        case #selector(toggleSaveAudio):
+            item.state = settings.saveAudio ? .on : .off
+            return settings.trackingLog
+        default: break
+        }
+        return true
+    }
 
     @objc func showLibrary() {
         if libraryWindow == nil {
@@ -125,26 +141,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 store: store, settings: settings,
                 actions: LibraryActions(
                     start: { [weak self] in self?.startSelected() },
-                    preview: { [weak self] in self?.previewSelected() },
-                    applyPreset: { [weak self] in self?.applyPreset($0) },
                     newScript: { [weak self] in self?.newScript() },
                     importPanel: { [weak self] in self?.importPanel() },
-                    pasteNew: { [weak self] in self?.pasteNew() },
-                    importURLs: { [weak self] in self?.importFiles($0, fromIsland: false) }
+                    importURLs: { [weak self] in self?.importFiles($0, fromIsland: false) },
+                    chooseStyle: { [weak self] in self?.chooseStyle($0) },
+                    resetPosition: { [weak self] in self?.resetPosition() }
                 )
             )
-            let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1140, height: 720),
+            let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1100, height: 700),
                              styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
                              backing: .buffered, defer: false)
-            w.title = "OpenPitch 稿件库"
+            w.title = "OpenSpeech"
             w.titlebarAppearsTransparent = true
             w.titleVisibility = .hidden
             w.isReleasedWhenClosed = false
             w.backgroundColor = NSColor(red: 0.04, green: 0.04, blue: 0.06, alpha: 1)
             w.contentView = NSHostingView(rootView: view)
-            w.minSize = NSSize(width: 1020, height: 620)
+            w.minSize = NSSize(width: 900, height: 560)
             w.center()
-            w.setFrameAutosaveName("OpenPitchLibrary")
+            w.setFrameAutosaveName("OpenSpeechLibrary")
             libraryWindow = w
         }
         NSApp.activate(ignoringOtherApps: true)
@@ -161,19 +176,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hk.register(.down) { [weak self] in self?.engine.jumpLines(1) }
         hk.register(.left) { [weak self] in self?.engine.adjustSpeed(-10) }
         hk.register(.right) { [weak self] in self?.engine.adjustSpeed(10) }
-        for (key, preset) in zip([HotKeyCenter.Key.one, .two, .three, .four, .five], PlacementPreset.all) {
-            hk.register(key) { [weak self] in self?.applyPreset(preset) }
-        }
     }
 
     private func buildMenu() {
         let main = NSMenu()
 
         let appMenu = NSMenu()
-        appMenu.addItem(withTitle: "关于 OpenPitch", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        appMenu.addItem(withTitle: "关于 OpenSpeech", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "隐藏 OpenPitch", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
-        appMenu.addItem(withTitle: "退出 OpenPitch", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appMenu.addItem(withTitle: "隐藏 OpenSpeech", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        appMenu.addItem(withTitle: "退出 OpenSpeech", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         addSubmenu(appMenu, to: main)
 
         let file = NSMenu(title: "文件")
@@ -185,8 +197,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         file.addItem(.separator())
         file.addItem(item("开始 / 暂停提词（⌥⌘P）", #selector(toggleAction), ""))
         file.addItem(item("结束提词（⌥⌘.）", #selector(stopAction), ""))
+        file.addItem(item("提词器回到默认位置", #selector(resetPosition), ""))
         file.addItem(.separator())
-        file.addItem(item("打开跟随日志文件夹", #selector(openLogs), ""))
+        // 开发 / 调优用的选项，放在菜单里，不占设置面板
+        let dev = NSMenu(title: "开发者选项")
+        dev.addItem(item("记录跟随日志（只存本机）", #selector(toggleTrackingLog), ""))
+        dev.addItem(item("保存测试录音（只存本机）", #selector(toggleSaveAudio), ""))
+        dev.addItem(item("打开日志文件夹", #selector(openLogs), ""))
+        let devItem = NSMenuItem(title: "开发者选项", action: nil, keyEquivalent: "")
+        devItem.submenu = dev
+        file.addItem(devItem)
         file.addItem(.separator())
         file.addItem(withTitle: "关闭窗口", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
         addSubmenu(file, to: main)
@@ -204,7 +224,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let window = NSMenu(title: "窗口")
         window.addItem(withTitle: "最小化", action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
-        window.addItem(item("稿件库", #selector(showLibrary), "1"))
+        window.addItem(item("OpenSpeech 主窗口", #selector(showLibrary), "1"))
         addSubmenu(window, to: main)
 
         NSApp.mainMenu = main
