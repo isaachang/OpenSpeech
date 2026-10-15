@@ -6,6 +6,21 @@ Format based on Keep a Changelog; versions follow Semantic Versioning.
 每个版本标题下面用 `>` 写一句给用户看的总结（第一行中文、第二行英文），App 里的「版本日志」和更新提示会显示它；每条的 “：” 或 “。” 之前是卡片上显示的短标题，英文界面显示条目下面那行英文。
 The `>` lines under each version (Chinese, then English) are the summary shown in the app; English UI shows the indented English line of each item.
 
+## [0.3.4] - 2026-10-15
+
+> 用 Zoom 的话，App 会提醒你改哪个设置；新增一行命令安装，也可以让 AI 助手帮你装。
+> If you use Zoom, the app shows the one setting to change; plus a one-line installer an AI assistant can run for you.
+
+### 新增 Added
+- Zoom 设置提醒：这台 Mac 装了 Zoom 时，主窗口顶上提示要在 Zoom 里改哪个设置，共享屏幕时对方才看不到提词器；点关闭就不再出现。
+  Zoom setting reminder: if Zoom is installed, the main window shows the setting that keeps the prompter out of shared screens.
+- 一行命令安装：在终端运行 README 里的那一行，自动下载最新版、装进「应用程序」并打开，最后列出接下来要做的事。
+  One-line installer: downloads the latest version, installs it into Applications, opens it and lists next steps.
+- 让 AI 助手帮你装：把仓库链接发给 Claude Code、Codex 这类助手就行，README 里写明了它装完要提醒你什么。
+  Install with an AI assistant: send it the repo link, and the README tells it what to remind you afterwards.
+- 固定下载链接：Releases 里多了一个不带版本号的 OpenSpeech.zip，永远是最新版。
+  Fixed download link: every release also has a version-less OpenSpeech.zip that is always the latest.
+
 ## [0.3.3] - 2026-10-15
 
 > 新增英文界面：系统语言里有中文就显示中文，也可以在设置里切换。
