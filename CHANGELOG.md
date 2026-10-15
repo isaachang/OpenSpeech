@@ -6,6 +6,15 @@ Format based on Keep a Changelog; versions follow Semantic Versioning.
 每个版本标题下面用 `>` 写一句给用户看的总结（第一行中文、第二行英文），App 里的「版本日志」和更新提示会显示它；每条的 “：” 或 “。” 之前是卡片上显示的短标题，英文界面显示条目下面那行英文。
 The `>` lines under each version (Chinese, then English) are the summary shown in the app; English UI shows the indented English line of each item.
 
+## [0.3.5] - 2026-10-15
+
+> Zoom 提醒更清楚了：平时只占一行，点「查看」就能看到三步怎么改。
+> A clearer Zoom reminder: one line until you need it, then three steps to follow.
+
+### 变更 Changed
+- Zoom 设置提醒改成一行：点「查看」弹出要改的三步，最后一步要选的选项高亮显示，和 Zoom 里看到的一样；可以直接打开 Zoom，改好后点「改好了」就不再提示。
+  Zoom setting reminder: now a single line; View opens the three steps with the option to pick highlighted, plus Open Zoom and Done.
+
 ## [0.3.4] - 2026-10-15
 
 > 用 Zoom 的话，App 会提醒你改哪个设置；新增一行命令安装，也可以让 AI 助手帮你装。

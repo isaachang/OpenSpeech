@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.3.4-1C1C1E" alt="version">
+  <img src="https://img.shields.io/badge/version-0.3.5-1C1C1E" alt="version">
   <img src="https://img.shields.io/badge/macOS-14%2B-1C1C1E" alt="macOS 14+">
   <img src="https://img.shields.io/badge/free-open%20source-1C1C1E" alt="free and open source">
   <img src="https://img.shields.io/badge/license-MIT-1C1C1E" alt="MIT">
