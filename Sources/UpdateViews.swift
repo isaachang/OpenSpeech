@@ -465,18 +465,18 @@ private struct SecondaryButton: View {
     }
 }
 
-private struct LinkButton: View {
+struct LinkButton: View {
     let title: String
     let action: () -> Void
     var body: some View {
         Button(action: action) {
-            Text(title).font(.system(size: 12.5, weight: .semibold)).foregroundColor(linkColor).padding(.horizontal, 6).frame(height: 26)
+            Text(title).font(.system(size: 12.5, weight: .semibold)).foregroundColor(Theme.link).padding(.horizontal, 6).frame(height: 26)
         }
         .buttonStyle(PressStyle())
     }
 }
 
-private struct CloseButton: View {
+struct CloseButton: View {
     let action: () -> Void
     var body: some View {
         Button(action: action) {

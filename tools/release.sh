@@ -1,5 +1,6 @@
 #!/bin/bash
-# 发版：编译（Apple 芯片 + Intel）→ 打 zip → 用 Sparkle 私钥签名 → 生成 appcast.xml → 发到 GitHub Releases。
+# 发版：编译（Apple 芯片 + Intel）→ 打 zip → 用 Sparkle 私钥签名 → 生成 appcast.xml → 发到 GitHub Releases
+#（同时上传不带版本号的 OpenSpeech.zip，给 install.sh 和固定下载链接用）。
 #   tools/release.sh                         正式发布 VERSION 里的版本（代码要先提交并推送）
 #   tools/release.sh --local DIR BASE_URL    只在 DIR 里生成 zip + appcast.xml，不上传（tools/test-update.sh 用）
 # 更新说明取自 CHANGELOG.md 里这个版本的那一段；可以用 RELEASE_NOTES_FILE 指定别的文件。
@@ -68,7 +69,9 @@ echo "✓ $OUT/$ZIP（$(du -h "$OUT/$ZIP" | cut -f1 | tr -d ' ')）+ $OUT/appcas
 
 if [ $MODE = publish ]; then
   echo "▸ 发布到 GitHub Releases…"
-  gh release create "v$V" "$OUT/$ZIP" "$OUT/appcast.xml" --repo "$REPO" \
+  # 再传一份不带版本号的 OpenSpeech.zip：固定链接 releases/latest/download/OpenSpeech.zip 永远指向最新版（install.sh 用）
+  cp "$OUT/$ZIP" "$OUT/OpenSpeech.zip"
+  gh release create "v$V" "$OUT/$ZIP" "$OUT/OpenSpeech.zip" "$OUT/appcast.xml" --repo "$REPO" \
     --title "OpenSpeech $V" --notes-file "$NOTES" --latest
   echo "✓ 已发布：https://github.com/$REPO/releases/tag/v$V"
 fi

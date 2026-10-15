@@ -160,6 +160,7 @@ private struct EditorPane: View {
             let stats = ScriptStats(b.wrappedValue.body)
             VStack(alignment: .leading, spacing: 10) {
                 UpdateBanner(model: updates)
+                ZoomTip(settings: settings)
                 TextField(tr("稿件标题", "Script title"), text: b.title)
                     .textFieldStyle(.plain)
                     .font(.system(size: 24, weight: .bold))

@@ -71,6 +71,8 @@ final class PrompterSettings: ObservableObject {
     var showsCardTip: Bool { !tipsDismissed && !(didMoveCard && didResizeCard && didResetCard) }
     /// 小抄的“可以拖动”提示：点过“知道了”或拖过一次就不再出现
     @Published var cheatTipDismissed: Bool { didSet { d.set(cheatTipDismissed, forKey: "cheatTipDismissed") } }
+    /// 装了 Zoom 时主窗口里的 “改一个设置” 提示：点过关闭就不再出现
+    @Published var zoomTipDismissed: Bool { didSet { d.set(zoomTipDismissed, forKey: "zoomTipDismissed") } }
     /// 小抄左上角的位置（每块屏幕各自记住）；没有记录 = 右上角
     @Published private(set) var cheatPositions: [String: CGPoint] {
         didSet { d.set(cheatPositions.mapValues { [Double($0.x), Double($0.y)] }, forKey: "cheatPositions") }
@@ -104,6 +106,7 @@ final class PrompterSettings: ObservableObject {
         didResizeCard = d.bool(forKey: "didResizeCard")
         didResetCard = d.bool(forKey: "didResetCard")
         cheatTipDismissed = d.bool(forKey: "cheatTipDismissed")
+        zoomTipDismissed = d.bool(forKey: "zoomTipDismissed")
         var cp: [String: CGPoint] = [:]
         for (k, v) in (d.dictionary(forKey: "cheatPositions") as? [String: [Double]]) ?? [:] where v.count == 2 {
             cp[k] = CGPoint(x: v[0], y: v[1])

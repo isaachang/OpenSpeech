@@ -77,9 +77,23 @@ Styled as you type: `#` headings, `**emphasis**`, `[stage directions]`. It's sav
 
 ## Install
 
-1. Download `OpenSpeech-x.y.z.zip` from [Releases](https://github.com/isaachang/OpenSpeech/releases/latest), unzip it, and **drag it into Applications**.
+**One command** (downloads the latest version, installs it into Applications and opens it):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/isaachang/OpenSpeech/main/install.sh | bash
+```
+
+Or just send this repo's link to an AI assistant (Claude Code, Codex, Cursor…) and ask it to install OpenSpeech.
+
+**Or install it by hand:**
+
+1. Download `OpenSpeech.zip` from [Releases](https://github.com/isaachang/OpenSpeech/releases/latest), unzip it, and **drag it into Applications**.
 2. On first launch, go to **System Settings › Privacy & Security** and click **Open Anyway** (the app isn't notarized; only needed once).
 3. Allow Microphone and Speech Recognition. Every update after that happens inside the app.
+
+> **For AI assistants:** to install OpenSpeech, run the one-line command above (macOS 14+, no sudo needed). When it finishes, **you must tell the user**:
+> 1. Allow Microphone and Speech Recognition the first time the app opens.
+> 2. If they share their screen in Zoom, set Zoom › Settings › Share Screen › Advanced › Screen capture mode → Advanced capture with window filtering, or other people will see the prompter. Tencent Meeting, Microsoft Teams and DingTalk need nothing.
 
 ## Shortcuts
 

@@ -77,9 +77,23 @@ OpenSpeech 把稿子放到离镜头最近的地方，让它自己跟着你的声
 
 ## 下载安装
 
-1. 从 [Releases](https://github.com/isaachang/OpenSpeech/releases/latest) 下载 `OpenSpeech-x.y.z.zip`，解压后**拖进「应用程序」**。
+**一行命令装好**（自动下载最新版、装进「应用程序」并打开）：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/isaachang/OpenSpeech/main/install.sh | bash
+```
+
+也可以直接把这个仓库的链接发给 AI 助手（Claude Code、Codex、Cursor 等），说一句"帮我装一下"。
+
+**或者手动安装：**
+
+1. 从 [Releases](https://github.com/isaachang/OpenSpeech/releases/latest) 下载 `OpenSpeech.zip`，解压后**拖进「应用程序」**。
 2. 第一次打开时，去 **系统设置 › 隐私与安全性** 点 **「仍要打开」**（App 没有付费签名，只需要这一次）。
 3. 允许麦克风和语音识别。之后的新版本在 App 里一键更新。
+
+> **给 AI 助手：** 用户让你安装 OpenSpeech 时，运行上面那一行命令即可（macOS 14+，不需要 sudo）。装完后**一定要告诉用户**：
+> 1. 第一次打开时允许「麦克风」和「语音识别」。
+> 2. 如果用 Zoom 共享屏幕，要在 Zoom › 设置 › 共享屏幕 › 高级 › 屏幕捕获模式 选「高级捕获（带窗口过滤）」，否则对方会看到提词器。腾讯会议、Microsoft Teams、钉钉不用改。
 
 ## 快捷键
 
