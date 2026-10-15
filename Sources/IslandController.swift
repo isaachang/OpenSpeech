@@ -70,6 +70,8 @@ final class IslandModel: ObservableObject {
     var panelSize = CGSize(width: 1100, height: 800)
     /// 离屏渲染截图时用纯色代替毛玻璃
     var snapshot = false
+    /// README 截图：不画刘海和悬挂细线，只留卡片和小抄
+    var hideIsland = false
 
     var dragging: Bool { dragPos != nil || resizing }
 }
@@ -307,7 +309,7 @@ final class IslandController {
         }
         settings.didResetCard = true
         guard engine.phase.isActive else { return }
-        model.cardToast = "已回到默认位置和大小"
+        model.cardToast = tr("已回到默认位置和大小", "Back to default position and size")
         toastWork?.cancel()
         let w = DispatchWorkItem { [weak self] in self?.model.cardToast = nil }
         toastWork = w

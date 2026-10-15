@@ -3,12 +3,27 @@
 格式参考 [Keep a Changelog](https://keepachangelog.com/)，版本号遵循 [语义化版本](https://semver.org/)。
 Format based on Keep a Changelog; versions follow Semantic Versioning.
 
-每个版本标题下面用 `>` 写一句给用户看的总结，App 里的「版本日志」和更新提示会显示它；每条的 “：” 或 “。” 之前是卡片上显示的短标题。
-The `>` line under each version is the one-line summary shown in the app.
+每个版本标题下面用 `>` 写一句给用户看的总结（第一行中文、第二行英文），App 里的「版本日志」和更新提示会显示它；每条的 “：” 或 “。” 之前是卡片上显示的短标题，英文界面显示条目下面那行英文。
+The `>` lines under each version (Chinese, then English) are the summary shown in the app; English UI shows the indented English line of each item.
+
+## [0.3.3] - 2026-10-15
+
+> 新增英文界面：系统语言里有中文就显示中文，也可以在设置里切换。
+> OpenSpeech now speaks English: the interface follows your Mac's languages, or pick one in settings.
+
+### 新增 Added
+- 英文界面：菜单、按钮、提示、更新卡片、版本日志都有英文版。设置里新增「界面语言」：自动 / 中文 / English。
+  English interface throughout, with a Language setting (Automatic / 中文 / English).
+- 英文示例稿：英文界面下附带英文的产品口播和面试故事库。English sample scripts, including an interview story bank.
+
+### 变更 Changed
+- 自动选择语言：只要系统语言列表里有中文就用中文，完全没有中文才用英文。
+  Automatic picks Chinese if it's anywhere in your language list.
 
 ## [0.3.2] - 2026-10-15
 
 > 纸白配色和液态玻璃；用 # 标题给稿子分段，提词时一键跳到任意一段；新增可拖动的小抄。
+> Paper-white look with liquid glass; split scripts with # headings and jump to any section; a draggable cheat sheet.
 
 ### 新增 Added
 - 标题：稿子里用 # 大标题、## 中标题、### 小标题分段。提词卡片上显示成灰色小路牌，不用念，跟读时自动跨过去。
@@ -37,6 +52,7 @@ The `>` line under each version is the one-line summary shown in the app.
 ## [0.3.1] - 2026-10-15
 
 > 打开主窗口时也会检查新版本，发布后更快看到更新提示。
+> Checks for updates when you open the main window, so new versions show up sooner.
 
 ### 改进 Changed
 - 打开主窗口时，如果距离上次检查超过 1 小时，会在后台再查一次新版本。之前只在启动时和每 24 小时查一次，而 App 关掉窗口后一直留在刘海里，很少真正重新启动。
@@ -45,6 +61,7 @@ The `>` line under each version is the one-line summary shown in the app.
 ## [0.3.0] - 2026-10-14
 
 > 可以在 App 里一键更新了，还能随时翻看每个版本改了什么；界面换成黑白配色和新图标。
+> One-click in-app updates, a version history, a black-and-white look and a new icon.
 
 ### 新增 Added
 - App 内一键更新：打开 App 时自动检查新版本，主窗口顶部出现提示；点“立即更新”自动下载、校验、安装并重新打开，稿件和设置都保留。正在提词时不打扰，讲完再提示。
@@ -65,6 +82,7 @@ The `>` line under each version is the one-line summary shown in the app.
 ## [0.2.0] - 2026-10-14
 
 > 改名 OpenSpeech，界面更简洁，提词卡片可以随意拖动。
+> Renamed to OpenSpeech, a simpler UI, and a prompter card you can drag anywhere.
 
 ### 变更 Changed
 - 产品改名：OpenPitch → OpenSpeech。首次启动自动迁移旧的稿件库、设置、跟随日志（旧数据保留）。因为应用标识变了，系统会重新询问一次麦克风和语音识别权限。
@@ -87,6 +105,7 @@ The `>` line under each version is the one-line summary shown in the app.
 ## [0.1.0] - 2026-10-14
 
 > 第一个公开版本：跟着你的声音走的刘海提词器。
+> First public release: a notch teleprompter that follows your voice.
 
 First public release.
 

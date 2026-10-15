@@ -36,8 +36,8 @@ struct LibraryView: View {
                     .overlay(
                         VStack(spacing: 10) {
                             Image(systemName: "arrow.down.doc.fill").font(.system(size: 40)).foregroundStyle(Theme.ink)
-                            Text("松手导入口播稿").font(.system(size: 18, weight: .bold))
-                            Text("支持 txt · md · docx · doc · rtf · pdf · html").font(.system(size: 12)).foregroundColor(.secondary)
+                            Text(tr("松手导入口播稿", "Drop to import")).font(.system(size: 18, weight: .bold))
+                            Text(tr("支持 txt · md · docx · doc · rtf · pdf · html", "txt · md · docx · doc · rtf · pdf · html")).font(.system(size: 12)).foregroundColor(.secondary)
                         }
                     )
                     .padding(14)
@@ -68,8 +68,8 @@ private struct Sidebar: View {
             HStack(spacing: 4) {
                 Text("OpenSpeech").font(.system(size: 17, weight: .bold, design: .rounded))
                 Spacer()
-                IconButton(icon: "plus", help: "新建稿件（⌘N）", action: actions.newScript)
-                IconButton(icon: "square.and.arrow.down", help: "导入文件（⌘O），也可以直接拖进窗口", action: actions.importPanel)
+                IconButton(icon: "plus", help: tr("新建稿件（⌘N）", "New script (⌘N)"), action: actions.newScript)
+                IconButton(icon: "square.and.arrow.down", help: tr("导入文件（⌘O），也可以直接拖进窗口", "Import files (⌘O), or drop them into the window"), action: actions.importPanel)
             }
             .padding(.top, 40)
             .padding(.horizontal, 6)
@@ -80,7 +80,7 @@ private struct Sidebar: View {
                         ScriptRow(script: s, speed: settings.targetSpeed, selected: s.id == store.selectedID)
                             .onTapGesture { store.selectedID = s.id }
                             .contextMenu {
-                                Button("删除", role: .destructive) { store.delete(s.id) }
+                                Button(tr("删除", "Delete"), role: .destructive) { store.delete(s.id) }
                             }
                     }
                 }
@@ -119,10 +119,10 @@ private struct ScriptRow: View {
     var body: some View {
         let stats = ScriptStats(script.body)
         VStack(alignment: .leading, spacing: 3) {
-            Text(script.title.isEmpty ? "未命名稿件" : script.title)
+            Text(script.title.isEmpty ? tr("未命名稿件", "Untitled") : script.title)
                 .font(.system(size: 13, weight: .semibold))
                 .lineLimit(1)
-            Text(stats.units == 0 ? stats.countText : "\(stats.countText) · 约 \(Fmt.clock(stats.duration(speed: speed)))")
+            Text(stats.units == 0 ? stats.countText : tr("\(stats.countText) · 约 \(Fmt.clock(stats.duration(speed: speed)))", "\(stats.countText) · ~\(Fmt.clock(stats.duration(speed: speed)))"))
                 .font(.system(size: 11))
                 .foregroundColor(Theme.ink3)
         }
@@ -160,15 +160,16 @@ private struct EditorPane: View {
             let stats = ScriptStats(b.wrappedValue.body)
             VStack(alignment: .leading, spacing: 10) {
                 UpdateBanner(model: updates)
-                TextField("稿件标题", text: b.title)
+                TextField(tr("稿件标题", "Script title"), text: b.title)
                     .textFieldStyle(.plain)
                     .font(.system(size: 24, weight: .bold))
 
                 HStack(spacing: 6) {
-                    Text("\(stats.countText) · 约 \(Fmt.clock(stats.duration(speed: settings.targetSpeed))) · \(stats.isLatin ? "English" : "中文")"
-                         + (stats.cues > 0 ? " · \(stats.cues) 处提示" : ""))
+                    Text(tr("\(stats.countText) · 约 \(Fmt.clock(stats.duration(speed: settings.targetSpeed))) · \(stats.isLatin ? "English" : "中文")",
+                            "\(stats.countText) · ~\(Fmt.clock(stats.duration(speed: settings.targetSpeed))) · \(stats.isLatin ? "English" : "Chinese")")
+                         + (stats.cues > 0 ? tr(" · \(stats.cues) 处提示", " · \(stats.cues) cues") : ""))
                     Image(systemName: "questionmark.circle")
-                        .help("# 大标题 · ## 中标题 · ### 小标题（⌘⌥1 / 2 / 3）：只是路牌，提词时不用念，可以用 ⌥⌘1…9 跳过去。\n【停顿】【看镜头】写导演提示：显示成橙色，不用念，跟读时自动跳过。\n**重点** 标出要重读的词。")
+                        .help(tr("# 大标题 · ## 中标题 · ### 小标题（⌘⌥1 / 2 / 3）：只是路牌，提词时不用念，可以用 ⌥⌘1…9 跳过去。\n【停顿】【看镜头】写导演提示：显示成橙色，不用念，跟读时自动跳过。\n**重点** 标出要重读的词。", "# large · ## medium · ### small heading (⌘⌥1 / 2 / 3): signposts you don't read aloud; jump to them with ⌥⌘1…9.\n[Pause] or 【…】 are stage directions: orange, optional to read.\n**word** marks emphasis."))
                 }
                 .font(.system(size: 12))
                 .foregroundColor(Theme.ink3)
@@ -183,7 +184,7 @@ private struct EditorPane: View {
                     Button(action: actions.start) {
                         HStack(spacing: 8) {
                             Image(systemName: "play.fill")
-                            Text("开始提词")
+                            Text(tr("开始提词", "Start"))
                         }
                         .font(.system(size: 14, weight: .bold))
                         .foregroundColor(Theme.primaryText)
@@ -196,7 +197,7 @@ private struct EditorPane: View {
                     .keyboardShortcut(.return, modifiers: .command)
 
                     Text("⌥⌘P").font(.system(size: 11.5, weight: .medium)).foregroundColor(Theme.ink3)
-                        .help("在任何 App 里按 ⌥⌘P 开始 / 暂停")
+                        .help(tr("在任何 App 里按 ⌥⌘P 开始 / 暂停", "Press ⌥⌘P in any app to start / pause"))
                     Spacer()
                 }
                 .padding(.top, 6)
@@ -207,11 +208,11 @@ private struct EditorPane: View {
         } else {
             VStack(spacing: 14) {
                 Image(systemName: "text.badge.plus").font(.system(size: 44)).foregroundStyle(Theme.ink)
-                Text("还没有稿件").font(.system(size: 18, weight: .bold))
-                Text("新建、粘贴，或者把 txt / md / docx / pdf 拖进来").foregroundColor(.secondary)
+                Text(tr("还没有稿件", "No scripts yet")).font(.system(size: 18, weight: .bold))
+                Text(tr("新建、粘贴，或者把 txt / md / docx / pdf 拖进来", "Create, paste, or drop in a txt / md / docx / pdf")).foregroundColor(.secondary)
                 HStack {
-                    IslandButton(icon: "square.and.pencil", label: "新建稿件", prominent: true, onDark: false, action: actions.newScript)
-                    IslandButton(icon: "square.and.arrow.down", label: "导入文件", onDark: false, action: actions.importPanel)
+                    IslandButton(icon: "square.and.pencil", label: tr("新建稿件", "New script"), prominent: true, onDark: false, action: actions.newScript)
+                    IslandButton(icon: "square.and.arrow.down", label: tr("导入文件", "Import"), onDark: false, action: actions.importPanel)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -229,7 +230,7 @@ private struct SettingsPane: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
             VStack(alignment: .leading, spacing: 10) {
-                Text("显示样式").font(.system(size: 11.5, weight: .semibold)).foregroundColor(Theme.ink3)
+                Text(tr("显示样式", "Style")).font(.system(size: 11.5, weight: .semibold)).foregroundColor(Theme.ink3)
                 HStack(spacing: 10) {
                     ForEach(DisplayStyle.allCases) { st in
                         StyleThumb(style: st, selected: settings.displayStyle == st) { actions.chooseStyle(st) }
@@ -238,7 +239,7 @@ private struct SettingsPane: View {
             }
 
             HStack(spacing: 10) {
-                Text("字号").font(.system(size: 13))
+                Text(tr("字号", "Text size")).font(.system(size: 13))
                 Spacer()
                 Image(systemName: "textformat.size.smaller").font(.system(size: 10)).foregroundColor(Theme.ink3)
                 Slider(value: Binding(get: { settings.fontSize }, set: { settings.fontSize = $0.rounded() }), in: 16...36).controlSize(.small).tint(Theme.control).frame(width: 110)
@@ -246,15 +247,15 @@ private struct SettingsPane: View {
             }
             .help("\(Int(settings.fontSize)) pt")
 
-            SwitchRow(title: "共享屏幕时隐藏", isOn: $settings.hideFromCapture)
-                .help("录屏、共享屏幕时对方看不到提词器")
-            SwitchRow(title: "开始前倒计时", isOn: $settings.countdown)
+            SwitchRow(title: tr("共享屏幕时隐藏", "Hide when sharing screen"), isOn: $settings.hideFromCapture)
+                .help(tr("录屏、共享屏幕时对方看不到提词器", "Others can't see the prompter in recordings or screen shares"))
+            SwitchRow(title: tr("开始前倒计时", "Countdown before start"), isOn: $settings.countdown)
 
             HStack {
-                Text("显示在").font(.system(size: 13))
+                Text(tr("显示在", "Show on")).font(.system(size: 13))
                 Spacer()
                 Picker("", selection: $settings.screenID) {
-                    Text("自动").tag("")
+                    Text(tr("自动", "Automatic")).tag("")
                     ForEach(NSScreen.screens, id: \.self) { s in
                         Text(s.localizedName).tag(ScreenKey.of(s))
                     }
@@ -263,10 +264,21 @@ private struct SettingsPane: View {
                 .frame(width: 140)
             }
 
+            HStack {
+                Text(tr("界面语言", "Language")).font(.system(size: 13))
+                Spacer()
+                Picker("", selection: Binding(get: { Lang.choice }, set: { Lang.set($0) })) {
+                    ForEach(Lang.Choice.allCases) { c in Text(c.title).tag(c) }
+                }
+                .labelsHidden()
+                .frame(width: 140)
+                .help(tr("切换后 App 会自动重新打开", "OpenSpeech relaunches to apply"))
+            }
+
             Button(action: actions.resetPosition) {
                 HStack(spacing: 6) {
                     Image(systemName: "scope")
-                    Text("回到默认位置和大小")
+                    Text(tr("回到默认位置和大小", "Reset position and size"))
                 }
                 .font(.system(size: 12.5, weight: .semibold))
                 .foregroundColor(Theme.buttonText)
@@ -276,7 +288,7 @@ private struct SettingsPane: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(PressStyle())
-            .help("摄像头正下方、预设大小。也可以直接双击提词卡片")
+            .help(tr("摄像头正下方、预设大小。也可以直接双击提词卡片", "Right below the camera, default size. You can also double-click the card"))
 
             Spacer()
             UpdateFooter(model: updates)

@@ -14,19 +14,19 @@ struct CardTip: View {
                 Image(systemName: "sparkles").font(.system(size: 13, weight: .bold)).foregroundColor(Theme.ink)
                     .frame(width: 26, height: 26)
                     .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Theme.highlighter))
-                Text("提词卡片可以随手调").font(.system(size: 13.5, weight: .bold)).foregroundColor(Theme.ink)
+                Text(tr("提词卡片可以随手调", "Adjust the card any time")).font(.system(size: 13.5, weight: .bold)).foregroundColor(Theme.ink)
             }
             VStack(alignment: .leading, spacing: 7) {
-                row("arrow.up.and.down.and.arrow.left.and.right", "拖中间：移动位置", "靠近中线会吸附", done: settings.didMoveCard)
-                row("arrow.up.left.and.arrow.down.right", "拖四个角：调大小", "每行字数 · 行数", done: settings.didResizeCard)
-                row("cursorarrow.click.2", "双击：回到默认", "位置和大小", done: settings.didResetCard)
+                row("arrow.up.and.down.and.arrow.left.and.right", tr("拖中间：移动位置", "Drag: move"), tr("靠近中线会吸附", "snaps to center"), done: settings.didMoveCard)
+                row("arrow.up.left.and.arrow.down.right", tr("拖四个角：调大小", "Drag corners: resize"), tr("每行字数 · 行数", "chars · lines"), done: settings.didResizeCard)
+                row("cursorarrow.click.2", tr("双击：回到默认", "Double-click: reset"), tr("位置和大小", "position & size"), done: settings.didResetCard)
             }
             .padding(.vertical, 11)
             HStack {
-                Text("只提示这一次").font(.system(size: 11)).foregroundColor(Theme.ink3)
+                Text(tr("只提示这一次", "Shown only once")).font(.system(size: 11)).foregroundColor(Theme.ink3)
                 Spacer()
                 Button { withAnimation(.easeOut(duration: 0.2)) { settings.tipsDismissed = true } } label: {
-                    Text("知道了").font(.system(size: 12, weight: .bold)).foregroundColor(Theme.primaryText)
+                    Text(tr("知道了", "Got it")).font(.system(size: 12, weight: .bold)).foregroundColor(Theme.primaryText)
                         .padding(.horizontal, 14).frame(height: 24)
                         .background(Capsule().fill(Theme.primaryFill))
                 }
@@ -51,7 +51,7 @@ struct CardTip: View {
                 .background(RoundedRectangle(cornerRadius: 6).fill(done ? Theme.greenInk.opacity(0.12) : Theme.wash))
             Text(title).font(.system(size: 12.5)).foregroundColor(done ? Theme.ink3 : Theme.ink)
             Spacer(minLength: 4)
-            Text(done ? "做过了" : hint).font(.system(size: 10.5)).foregroundColor(Theme.ink3)
+            Text(done ? tr("做过了", "Done") : hint).font(.system(size: 10.5)).foregroundColor(Theme.ink3)
         }
         .animation(.easeOut(duration: 0.2), value: done)
     }
@@ -209,7 +209,7 @@ struct CheatSheet: View {
                     GridRow { ForEach(0..<3, id: \.self) { _ in Circle().fill(Color.black.opacity(0.25)).frame(width: 3, height: 3) } }
                     GridRow { ForEach(0..<3, id: \.self) { _ in Circle().fill(Color.black.opacity(0.25)).frame(width: 3, height: 3) } }
                 }
-                Text("小抄").font(.system(size: 13, weight: .bold))
+                Text(tr("小抄", "Cheat sheet")).font(.system(size: 13, weight: .bold))
                 Text(engine.title).font(.system(size: 11.5)).foregroundColor(Theme.ink3).lineLimit(1)
                 Spacer(minLength: 4)
                 Button(action: close) {
@@ -225,7 +225,7 @@ struct CheatSheet: View {
             .contentShape(Rectangle())
             .onTapGesture(count: 2) { move.reset() }
             .gesture(move.gesture(start: $dragStart))
-            .help("按住拖动 · 双击回到右上角")
+            .help(tr("按住拖动 · 双击回到右上角", "Drag to move · double-click to send back"))
 
             let fade = LinearGradient(stops: [.init(color: .clear, location: 0), .init(color: .black, location: 0.05),
                                               .init(color: .black, location: 0.92), .init(color: .clear, location: 1)],
@@ -250,9 +250,9 @@ struct CheatSheet: View {
             }
 
             HStack {
-                Text(parsed.sections.isEmpty ? "点一段跳过去" : "点标题或段落跳过去").font(.system(size: 10.5))
+                Text(parsed.sections.isEmpty ? tr("点一段跳过去", "Click a paragraph to jump") : tr("点标题或段落跳过去", "Click a heading or paragraph to jump")).font(.system(size: 10.5))
                 Spacer()
-                Text("⌥⌘O 收起").font(.system(size: 10.5))
+                Text(tr("⌥⌘O 收起", "⌥⌘O to hide")).font(.system(size: 10.5))
             }
             .foregroundColor(Theme.ink3)
             .padding(.horizontal, 14)
@@ -279,7 +279,7 @@ extension CheatSheet {
                                     read: p.number.map { $0 < (curSection ?? 0) } ?? false)
                         .contentShape(Rectangle())
                         .onTapGesture { engine.jump(toUnit: h.nextUnit) }
-                        .help("跳到这一段")
+                        .help(tr("跳到这一段", "Jump here"))
                         .id(p.id)
                 } else {
                     p.text(parsed, cursor: cur)
@@ -293,7 +293,7 @@ extension CheatSheet {
                             .fill(p.id == curPara ? Color.white.opacity(0.6) : .clear))
                         .contentShape(Rectangle())
                         .onTapGesture { if let u = p.firstUnit { engine.jump(toUnit: u) } }
-                        .help("跳到这一段")
+                        .help(tr("跳到这一段", "Jump here"))
                         .id(p.id)
                 }
             }
@@ -313,14 +313,14 @@ struct CheatTip: View {
                 Image(systemName: "sparkles").font(.system(size: 11, weight: .bold)).foregroundColor(Theme.ink)
                     .frame(width: 22, height: 22)
                     .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Theme.highlighter))
-                Text("小抄可以拖到任何地方").font(.system(size: 13, weight: .bold)).foregroundColor(Theme.ink)
+                Text(tr("小抄可以拖到任何地方", "Drag the cheat sheet anywhere")).font(.system(size: 13, weight: .bold)).foregroundColor(Theme.ink)
             }
-            Text("按住顶部拖动；双击顶部回到右上角。每块屏幕各记各的位置。")
+            Text(tr("按住顶部拖动；双击顶部回到右上角。每块屏幕各记各的位置。", "Drag it by the top; double-click the top to send it back. Remembered per screen."))
                 .font(.system(size: 12)).foregroundColor(Theme.ink2).fixedSize(horizontal: false, vertical: true)
             HStack {
                 Spacer()
                 Button { withAnimation(.easeOut(duration: 0.2)) { settings.cheatTipDismissed = true } } label: {
-                    Text("知道了").font(.system(size: 11.5, weight: .bold)).foregroundColor(Theme.primaryText)
+                    Text(tr("知道了", "Got it")).font(.system(size: 11.5, weight: .bold)).foregroundColor(Theme.primaryText)
                         .padding(.horizontal, 12).frame(height: 22)
                         .background(Capsule().fill(Theme.primaryFill))
                 }

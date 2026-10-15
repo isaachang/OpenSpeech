@@ -5,8 +5,8 @@ enum PrompterMode: String, CaseIterable, Identifiable {
     case voice, pace
     var id: String { rawValue }
 
-    var title: String { self == .voice ? "语音跟读" : "智能匀速" }
-    var short: String { self == .voice ? "跟读" : "匀速" }
+    var title: String { self == .voice ? tr("语音跟读", "Voice-follow") : tr("智能匀速", "Constant speed") }
+    var short: String { self == .voice ? tr("跟读", "Voice") : tr("匀速", "Pace") }
     var icon: String { self == .voice ? "waveform" : "metronome" }
 }
 
@@ -14,7 +14,7 @@ enum PrompterMode: String, CaseIterable, Identifiable {
 enum DisplayStyle: String, CaseIterable, Identifiable {
     case glass, caption
     var id: String { rawValue }
-    var title: String { self == .glass ? "玻璃卡片" : "字幕胶囊" }
+    var title: String { self == .glass ? tr("玻璃卡片", "Glass card") : tr("字幕胶囊", "Caption") }
 }
 
 /// 提词卡片的位置：正在读的那一行的中心，相对屏幕顶边中点（摄像头正下方）

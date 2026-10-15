@@ -92,7 +92,7 @@ final class PrompterEngine: ObservableObject {
         speech.onRecognitionFailed = { [weak self] reason in
             guard let self, self.phase.isActive else { return }
             self.activeMode = .pace
-            self.showToast("语音识别不可用（\(reason)），已切到智能匀速")
+            self.showToast(tr("语音识别不可用（\(reason)），已切到智能匀速", "Speech recognition unavailable (\(reason)); switched to constant speed"))
         }
         // 字号 / 样式 / 每行字数变了就重新折行（objectWillChange 在改之前发出，切到下一轮主线程再读新值）
         settings.objectWillChange
@@ -118,7 +118,7 @@ final class PrompterEngine: ObservableObject {
 
     // MARK: - Derived
 
-    var unitLabel: String { parsed.isMostlyLatin ? "词/分" : "字/分" }
+    var unitLabel: String { parsed.isMostlyLatin ? tr("词/分", "wpm") : tr("字/分", "cpm") }
     var paceSpeed: Double { parsed.isMostlyLatin ? settings.targetSpeed * 0.6 : settings.targetSpeed }
     var progress: Double { parsed.units.isEmpty ? 0 : min(1, cursor / Double(parsed.units.count)) }
 
@@ -131,7 +131,7 @@ final class PrompterEngine: ObservableObject {
     var speedText: String {
         switch activeMode {
         case .pace: return "\(Int(paceSpeed)) \(unitLabel)"
-        case .voice: return liveSpeed.map { "\(Int($0)) \(unitLabel)" } ?? (listening ? "聆听中…" : "准备中…")
+        case .voice: return liveSpeed.map { "\(Int($0)) \(unitLabel)" } ?? (listening ? tr("聆听中…", "Listening…") : tr("准备中…", "Getting ready…"))
         }
     }
 
@@ -149,7 +149,7 @@ final class PrompterEngine: ObservableObject {
         teardown()
         sessionToken += 1
         parsed = p
-        title = script.title.isEmpty ? "未命名稿件" : script.title
+        title = script.title.isEmpty ? tr("未命名稿件", "Untitled") : script.title
         cursor = 0
         target = 0
         anchor = 0
@@ -244,7 +244,7 @@ final class PrompterEngine: ObservableObject {
 
     func adjustSpeed(_ d: Double) {
         settings.targetSpeed = max(100, min(400, settings.targetSpeed + d))
-        if phase.isActive { showToast("匀速语速 \(Int(paceSpeed)) \(unitLabel)", duration: 1.6) }
+        if phase.isActive { showToast(tr("匀速语速 \(Int(paceSpeed)) \(unitLabel)", "Speed \(Int(paceSpeed)) \(unitLabel)"), duration: 1.6) }
     }
 
     func switchMode() {
@@ -253,7 +253,7 @@ final class PrompterEngine: ObservableObject {
         settings.mode = newMode
         activeMode = newMode
         if previewing {
-            showToast("开始后使用：\(newMode.title)", duration: 1.6)
+            showToast(tr("开始后使用：\(newMode.title)", "After start: \(newMode.title)"), duration: 1.6)
             return
         }
         speech.stop()
@@ -266,7 +266,7 @@ final class PrompterEngine: ObservableObject {
         liveSpeed = nil
         logger.write(["ev": "mode", "mode": newMode.rawValue], now: CACurrentMediaTime())
         startAudio()
-        showToast(newMode == .voice ? "已切到语音跟读：开口说话即可" : "已切到智能匀速：\(Int(paceSpeed)) \(unitLabel)")
+        showToast(newMode == .voice ? tr("已切到语音跟读：开口说话即可", "Voice-follow on: just start talking") : tr("已切到智能匀速：\(Int(paceSpeed)) \(unitLabel)", "Constant speed: \(Int(paceSpeed)) \(unitLabel)"))
     }
 
     func showToast(_ s: String, duration: Double = 4) {
@@ -324,14 +324,14 @@ final class PrompterEngine: ObservableObject {
             guard let self, self.sessionToken == token, self.phase.isActive else { return }
             guard mic else {
                 if self.activeMode == .voice { self.activeMode = .pace }
-                self.showToast("没有麦克风权限，已改为纯匀速（系统设置 › 隐私与安全性 › 麦克风）", duration: 6)
+                self.showToast(tr("没有麦克风权限，已改为纯匀速（系统设置 › 隐私与安全性 › 麦克风）", "No microphone access; using constant speed (System Settings › Privacy & Security › Microphone)"), duration: 6)
                 return
             }
             var recognition = wantSpeech
             if wantSpeech && !speechOK {
                 recognition = false
                 self.activeMode = .pace
-                self.showToast("没有语音识别权限，已切到智能匀速（系统设置 › 隐私与安全性 › 语音识别）", duration: 6)
+                self.showToast(tr("没有语音识别权限，已切到智能匀速（系统设置 › 隐私与安全性 › 语音识别）", "No speech recognition access; using constant speed (System Settings › Privacy & Security › Speech Recognition)"), duration: 6)
             }
             self.speech.recordURL = self.settings.saveAudio ? self.logger.audioURL : nil
             do {
@@ -339,7 +339,7 @@ final class PrompterEngine: ObservableObject {
                 self.listening = true
             } catch {
                 if self.activeMode == .voice { self.activeMode = .pace }
-                self.showToast("麦克风启动失败：\(error.localizedDescription)", duration: 6)
+                self.showToast(tr("麦克风启动失败：\(error.localizedDescription)", "Microphone failed to start: \(error.localizedDescription)"), duration: 6)
             }
         }
     }

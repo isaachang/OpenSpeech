@@ -21,22 +21,22 @@ struct UpdateBanner: View {
                     Image(systemName: "sparkles").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.ink)
                         .frame(width: 26)
                     VStack(alignment: .leading, spacing: 1) {
-                        Text("OpenSpeech \(r.version) 可以更新了").font(.system(size: 13, weight: .semibold))
+                        Text(tr("OpenSpeech \(r.version) 可以更新了", "OpenSpeech \(r.version) is available")).font(.system(size: 13, weight: .semibold))
                         Text(r.shortLine).font(.system(size: 11.5)).foregroundColor(Theme.ink2).lineLimit(1)
                     }
                     Spacer(minLength: 8)
-                    LinkButton(title: "查看更新内容") { model.panel = .notes }
-                    AccentButton(title: "立即更新", action: model.onInstall)
+                    LinkButton(title: tr("查看更新内容", "What's new")) { model.panel = .notes }
+                    AccentButton(title: tr("立即更新", "Update now"), action: model.onInstall)
                     CloseButton { withAnimation(.easeOut(duration: 0.3)) { model.bannerDismissed = true } }
                 }
                 .transition(.move(edge: .top).combined(with: .opacity))
             } else if let v = model.justUpdated {
                 bar(border: Theme.greenInk.opacity(0.3), fill: AnyShapeStyle(Theme.greenInk.opacity(0.07))) {
                     Image(systemName: "checkmark.circle.fill").font(.system(size: 15)).foregroundColor(Theme.greenInk).frame(width: 26)
-                    Text("已更新到 \(v)").font(.system(size: 13, weight: .semibold))
-                    Text("稿件和设置都在").font(.system(size: 11.5)).foregroundColor(Theme.ink2)
+                    Text(tr("已更新到 \(v)", "Updated to \(v)")).font(.system(size: 13, weight: .semibold))
+                    Text(tr("稿件和设置都在", "Your scripts and settings are kept")).font(.system(size: 11.5)).foregroundColor(Theme.ink2)
                     Spacer(minLength: 8)
-                    LinkButton(title: "看看更新了什么") { model.panel = .changelog }
+                    LinkButton(title: tr("看看更新了什么", "See what's new")) { model.panel = .changelog }
                     CloseButton { withAnimation(.easeOut(duration: 0.3)) { model.justUpdated = nil } }
                 }
                 .transition(.move(edge: .top).combined(with: .opacity))
@@ -65,28 +65,28 @@ struct UpdateFooter: View {
             switch model.stage {
             case .checking:
                 ProgressView().controlSize(.mini)
-                Text("正在检查更新…")
+                Text(tr("正在检查更新…", "Checking for updates…"))
             case .upToDate:
                 Image(systemName: "checkmark").foregroundColor(Theme.greenInk)
-                Text("已是最新版本（\(model.current)）")
+                Text(tr("已是最新版本（\(model.current)）", "You're up to date (\(model.current))"))
             case .checkFailed(let offline):
                 Image(systemName: offline ? "wifi.exclamationmark" : "exclamationmark.circle").foregroundColor(Theme.amberInk)
-                Text(offline ? "连不上网络，检查网络后再试" : "暂时查不到更新信息，稍后再试")
+                Text(offline ? tr("连不上网络，检查网络后再试", "Can't connect. Check your network") : tr("暂时查不到更新信息，稍后再试", "No update info right now. Try later"))
             default:
-                Text("版本 \(model.current) ·")
+                Text(tr("版本 \(model.current) ·", "v\(model.current) ·"))
                 if model.hasUpdate, let r = model.release {
                     Button(action: model.onCheck) {
                         HStack(spacing: 5) {
                             Circle().fill(Theme.ink).frame(width: 6, height: 6)
-                            Text("有新版本 \(r.version)")
+                            Text(tr("有新版本 \(r.version)", "New version \(r.version)"))
                         }
                     }
                     .buttonStyle(.plain).foregroundColor(linkColor)
                 } else {
-                    Button("检查更新", action: model.onCheck).buttonStyle(.plain).foregroundColor(linkColor)
+                    Button(tr("检查更新", "Check for updates"), action: model.onCheck).buttonStyle(.plain).foregroundColor(linkColor)
                 }
                 Text("·")
-                Button("版本日志") { model.panel = .changelog }.buttonStyle(.plain).foregroundColor(linkColor)
+                Button(tr("版本日志", "Changelog")) { model.panel = .changelog }.buttonStyle(.plain).foregroundColor(linkColor)
             }
         }
         .font(.system(size: 11.5, weight: .medium))
@@ -165,22 +165,22 @@ private struct NotesPanel: View {
     var body: some View {
         let r = model.release
         VStack(alignment: .leading, spacing: 0) {
-            PanelHeader(icon: "arrow.down.circle", title: "更新到 OpenSpeech \(r?.version ?? "")",
-                        subtitle: ["当前 \(model.current)", sizeText(model.releaseSize).isEmpty ? nil : "约 \(sizeText(model.releaseSize))", r?.date]
+            PanelHeader(icon: "arrow.down.circle", title: tr("更新到 OpenSpeech \(r?.version ?? "")", "Update to OpenSpeech \(r?.version ?? "")"),
+                        subtitle: [tr("当前 \(model.current)", "Current \(model.current)"), sizeText(model.releaseSize).isEmpty ? nil : tr("约 \(sizeText(model.releaseSize))", "~\(sizeText(model.releaseSize))"), r?.date]
                             .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "))
             if let r { EntryBody(entry: r).padding(16).background(RoundedRectangle(cornerRadius: 14).fill(Theme.wash)) }
             HStack(spacing: 7) {
                 Image(systemName: "checkmark.shield.fill").foregroundColor(Theme.greenInk)
-                Text("稿件、设置、卡片位置都会保留，麦克风权限也不用重新给。")
+                Text(tr("稿件、设置、卡片位置都会保留，麦克风权限也不用重新给。", "Scripts, settings and card position are kept; no need to grant the microphone again."))
             }
             .font(.system(size: 12)).foregroundColor(Theme.ink2)
             .padding(.vertical, 14)
             HStack(spacing: 10) {
-                Button("跳过这个版本", action: model.onSkip).buttonStyle(.plain)
+                Button(tr("跳过这个版本", "Skip this version"), action: model.onSkip).buttonStyle(.plain)
                     .font(.system(size: 12.5, weight: .semibold)).foregroundColor(Theme.ink3)
                 Spacer()
-                SecondaryButton(title: "以后再说", action: model.onLater)
-                AccentButton(title: "立即更新", big: true, action: model.onInstall)
+                SecondaryButton(title: tr("以后再说", "Later"), action: model.onLater)
+                AccentButton(title: tr("立即更新", "Update now"), big: true, action: model.onInstall)
             }
         }
     }
@@ -196,13 +196,13 @@ private struct ProgressPanel: View {
         let (s1, s2, s3, fraction) = steps(failed: failed != nil)
         VStack(alignment: .leading, spacing: 0) {
             PanelHeader(icon: failed == nil ? "arrow.triangle.2.circlepath" : "exclamationmark.triangle",
-                        title: failed == nil ? "正在更新到 \(model.release?.version ?? "新版本")…" : "更新没完成",
-                        subtitle: "当前 \(model.current)" + (model.releaseSize > 0 ? " · 约 \(sizeText(model.releaseSize))" : ""),
+                        title: failed == nil ? tr("正在更新到 \(model.release?.version ?? "新版本")…", "Updating to \(model.release?.version ?? "the new version")…") : tr("更新没完成", "Update didn't finish"),
+                        subtitle: tr("当前 \(model.current)", "Current \(model.current)") + (model.releaseSize > 0 ? tr(" · 约 \(sizeText(model.releaseSize))", " · ~\(sizeText(model.releaseSize))") : ""),
                         warn: failed != nil, spinning: failed == nil)
             VStack(alignment: .leading, spacing: 4) {
-                StepRow(state: s1, title: "下载新版本", detail: failed ?? downloadDetail)
-                StepRow(state: s2, title: "确认是官方发布的版本", detail: "检查安装包的签名，防止被篡改")
-                StepRow(state: s3, title: "安装并重新打开", detail: "替换旧版本，稿件和设置不动 · 大约 1 秒")
+                StepRow(state: s1, title: tr("下载新版本", "Download"), detail: failed ?? downloadDetail)
+                StepRow(state: s2, title: tr("确认是官方发布的版本", "Verify it's an official release"), detail: tr("检查安装包的签名，防止被篡改", "Checks the signature so it can't be tampered with"))
+                StepRow(state: s3, title: tr("安装并重新打开", "Install and relaunch"), detail: tr("替换旧版本，稿件和设置不动 · 大约 1 秒", "Replaces the old version, keeps your data · about 1 s"))
                 GeometryReader { g in
                     ZStack(alignment: .leading) {
                         Capsule().fill(Theme.wash)
@@ -218,21 +218,21 @@ private struct ProgressPanel: View {
             .background(RoundedRectangle(cornerRadius: 14).fill(Theme.wash))
             HStack(spacing: 7) {
                 Image(systemName: "info.circle")
-                Text(failed != nil ? "旧版本没有被改动，可以照常使用。"
-                     : model.stage == .installing ? "马上会自动重新打开，不用做任何操作。" : "下载在后台进行，可以继续编辑稿件。")
+                Text(failed != nil ? tr("旧版本没有被改动，可以照常使用。", "The old version is untouched and works as before.")
+                     : model.stage == .installing ? tr("马上会自动重新打开，不用做任何操作。", "It will relaunch by itself in a moment.") : tr("下载在后台进行，可以继续编辑稿件。", "Downloading in the background; keep editing if you like."))
             }
             .font(.system(size: 12)).foregroundColor(Theme.ink2)
             .padding(.vertical, 14)
             HStack(spacing: 10) {
                 if failed != nil {
-                    Link("去网页下载", destination: URL(string: "https://github.com/isaachang/OpenSpeech/releases/latest")!)
+                    Link(tr("去网页下载", "Download from the website"), destination: URL(string: "https://github.com/isaachang/OpenSpeech/releases/latest")!)
                         .font(.system(size: 12.5, weight: .semibold)).foregroundColor(Theme.ink3)
                     Spacer()
-                    SecondaryButton(title: "以后再说", action: model.onLater)
-                    AccentButton(title: "重试", big: true, action: model.onRetry)
+                    SecondaryButton(title: tr("以后再说", "Later"), action: model.onLater)
+                    AccentButton(title: tr("重试", "Try again"), big: true, action: model.onRetry)
                 } else {
                     Spacer()
-                    if case .downloading = model.stage { SecondaryButton(title: "取消", action: model.onCancel) }
+                    if case .downloading = model.stage { SecondaryButton(title: tr("取消", "Cancel"), action: model.onCancel) }
                 }
             }
             .frame(minHeight: 34)
@@ -243,7 +243,7 @@ private struct ProgressPanel: View {
         if case .downloading(let got, let total) = model.stage, total > 0 {
             return "\(sizeText(min(got, total))) / \(sizeText(total))"
         }
-        return model.releaseSize > 0 ? "\(sizeText(model.releaseSize)) / \(sizeText(model.releaseSize))" : "已下载"
+        return model.releaseSize > 0 ? "\(sizeText(model.releaseSize)) / \(sizeText(model.releaseSize))" : tr("已下载", "Downloaded")
     }
 
     private func steps(failed: Bool) -> (StepState, StepState, StepState, CGFloat) {
@@ -301,11 +301,11 @@ private struct MovePanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            PanelHeader(icon: "folder", title: "先把 OpenSpeech 放进「应用程序」", subtitle: "它现在是从「下载」文件夹里直接打开的", warn: true)
+            PanelHeader(icon: "folder", title: tr("先把 OpenSpeech 放进「应用程序」", "Move OpenSpeech to Applications first"), subtitle: tr("它现在是从「下载」文件夹里直接打开的", "It's running straight from Downloads"), warn: true)
             VStack(alignment: .leading, spacing: 6) {
-                Text("macOS 不允许直接替换「下载」里的 App，所以没法在这里更新。")
-                Text("点下面的按钮，OpenSpeech 会把自己移到「应用程序」文件夹并重新打开，然后就能更新了。")
-                Text("只需要做这一次。").foregroundColor(Theme.ink3)
+                Text(tr("macOS 不允许直接替换「下载」里的 App，所以没法在这里更新。", "macOS won't let an app in Downloads replace itself, so it can't update from here."))
+                Text(tr("点下面的按钮，OpenSpeech 会把自己移到「应用程序」文件夹并重新打开，然后就能更新了。", "Click below and OpenSpeech will move itself to Applications and relaunch, then it can update."))
+                Text(tr("只需要做这一次。", "You only need to do this once.")).foregroundColor(Theme.ink3)
             }
             .font(.system(size: 13)).lineSpacing(3)
             .padding(16)
@@ -313,8 +313,8 @@ private struct MovePanel: View {
             .background(RoundedRectangle(cornerRadius: 14).fill(Theme.wash))
             HStack(spacing: 10) {
                 Spacer()
-                SecondaryButton(title: "以后再说", action: model.onLater)
-                AccentButton(title: "移到「应用程序」", big: true, action: model.onMove)
+                SecondaryButton(title: tr("以后再说", "Later"), action: model.onLater)
+                AccentButton(title: tr("移到「应用程序」", "Move to Applications"), big: true, action: model.onMove)
             }
             .padding(.top, 18)
         }
@@ -329,7 +329,7 @@ private struct ChangelogPanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text("版本日志").font(.system(size: 19, weight: .bold))
+                Text(tr("版本日志", "Version history")).font(.system(size: 19, weight: .bold))
                 Spacer()
                 CloseButton { model.panel = nil }
             }
@@ -338,7 +338,7 @@ private struct ChangelogPanel: View {
                 .frame(maxHeight: 520)
             HStack {
                 Spacer()
-                Link("在 GitHub 上看完整日志", destination: URL(string: "https://github.com/isaachang/OpenSpeech/blob/main/CHANGELOG.md")!)
+                Link(tr("在 GitHub 上看完整日志", "Full changelog on GitHub"), destination: URL(string: "https://github.com/isaachang/OpenSpeech/blob/main/CHANGELOG.md")!)
                     .font(.system(size: 12, weight: .semibold)).foregroundColor(linkColor)
             }
             .padding(.top, 12)
@@ -372,8 +372,8 @@ private struct ChangelogCard: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 Text(entry.version).font(.system(size: 16, weight: .heavy, design: .rounded))
-                if badge == .current { Pill(text: "当前版本", color: Theme.greenInk) }
-                if badge == .available { Pill(text: "可以更新", color: Theme.ink) }
+                if badge == .current { Pill(text: tr("当前版本", "Current"), color: Theme.greenInk) }
+                if badge == .available { Pill(text: tr("可以更新", "Available"), color: Theme.ink) }
                 Spacer()
                 Text(entry.date).font(.system(size: 11.5)).foregroundColor(Theme.ink3)
             }
@@ -382,7 +382,7 @@ private struct ChangelogCard: View {
             }
             EntryBody(entry: entry, compact: true)
             if let onInstall {
-                HStack { Spacer(); AccentButton(title: "立即更新", action: onInstall) }
+                HStack { Spacer(); AccentButton(title: tr("立即更新", "Update now"), action: onInstall) }
             }
         }
         .padding(16)

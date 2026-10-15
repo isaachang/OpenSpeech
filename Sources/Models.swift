@@ -25,7 +25,7 @@ struct ScriptStats {
         Double(units) / max(1, isLatin ? speed * 0.6 : speed) * 60
     }
 
-    var countText: String { isLatin ? "\(units) words" : "\(units) 字" }
+    var countText: String { isLatin ? "\(units) words" : tr("\(units) 字", "\(units) chars") }
 }
 
 final class ScriptStore: ObservableObject {
@@ -49,10 +49,14 @@ final class ScriptStore: ObservableObject {
             scripts = list
         }
         if scripts.isEmpty {
-            scripts = [
-                Script(title: "示例：一分钟产品口播", body: SampleScripts.chinese),
-                Script(title: "Sample: 30s English Pitch", body: SampleScripts.english),
+            // 示例稿跟着界面语言：中文界面三篇（含一篇英文），英文界面两篇英文
+            scripts = Lang.isChinese ? [
+                Script(title: "示例：OpenSpeech 一分钟介绍", body: SampleScripts.pitch),
+                Script(title: "Sample: OpenSpeech in One Minute", body: SampleScripts.pitchEnglish),
                 Script(title: "示例：面试故事库（用 ## 分段）", body: SampleScripts.interview),
+            ] : [
+                Script(title: "Sample: OpenSpeech in One Minute", body: SampleScripts.pitchEnglish),
+                Script(title: "Sample: Interview Stories (## sections)", body: SampleScripts.interviewEnglish),
             ]
         }
         selectedID = scripts.first?.id
@@ -120,7 +124,7 @@ enum ScriptImporter {
         var text: String
         switch ext {
         case "pdf":
-            guard let doc = PDFDocument(url: url), let s = doc.string else { throw ImportError(message: "PDF 里没读到文字（可能是扫描件）") }
+            guard let doc = PDFDocument(url: url), let s = doc.string else { throw ImportError(message: tr("PDF 里没读到文字（可能是扫描件）", "No text found in the PDF (it may be a scan)")) }
             text = s
         case "docx", "doc", "rtf", "rtfd", "odt", "html", "htm":
             text = try NSAttributedString(url: url, options: [:], documentAttributes: nil).string
@@ -130,7 +134,7 @@ enum ScriptImporter {
             text = try readPlain(url)
         }
         text = normalize(text)
-        guard !text.isEmpty else { throw ImportError(message: "文件是空的") }
+        guard !text.isEmpty else { throw ImportError(message: tr("文件是空的", "The file is empty")) }
         return Script(title: url.deletingPathExtension().lastPathComponent, body: text)
     }
 
@@ -138,7 +142,7 @@ enum ScriptImporter {
         guard let s = NSPasteboard.general.string(forType: .string) else { return nil }
         let body = normalize(s)
         guard !body.isEmpty else { return nil }
-        let firstLine = body.split(separator: "\n").first.map(String.init) ?? "粘贴的稿件"
+        let firstLine = body.split(separator: "\n").first.map(String.init) ?? tr("粘贴的稿件", "Pasted script")
         let title = String(firstLine.replacingOccurrences(of: "【", with: "").prefix(18))
         return Script(title: title, body: body)
     }
@@ -149,7 +153,7 @@ enum ScriptImporter {
         let gb = CFStringConvertEncodingToNSStringEncoding(CFStringEncoding(CFStringEncodings.GB_18030_2000.rawValue))
         if let s = String(data: data, encoding: String.Encoding(rawValue: gb)) { return s }
         if let s = String(data: data, encoding: .utf16) { return s }
-        throw ImportError(message: "无法识别文本编码")
+        throw ImportError(message: tr("无法识别文本编码", "Unknown text encoding"))
     }
 
     static func cleanMarkdown(_ s: String) -> String {
@@ -179,6 +183,76 @@ enum ScriptImporter {
 }
 
 enum SampleScripts {
+    /// 产品介绍（README 截图也用这一篇）：痛点 → 是什么 → 怎么跟着你 → 开会也能用 → 免费开源
+    static let pitch = """
+    # OpenSpeech 一分钟介绍
+
+    ## 痛点
+    对着镜头讲话，最难的不是内容，而是记稿子。
+    眼睛一会儿看稿、一会儿看镜头，观众一眼就看得出你在念。
+
+    ## OpenSpeech 是什么
+    OpenSpeech 是一个住在 Mac 刘海里的提词器。
+    稿子就贴在摄像头正下方，你看稿的时候，眼神就在看**镜头**。
+
+    ## 它会跟着你
+    它会听你说话：你讲快它就快，你停下它就等你。
+    即兴发挥也不怕，它不会乱跳，等你回到稿子再接着走。
+
+    ## 开会、面试都能用
+    共享屏幕时，对方看不到它。
+    把经历分好段，被问到哪一段，按一下就跳过去。
+
+    ## 免费、开源
+    OpenSpeech 完全免费开源，所有处理都在你的 Mac 上完成。
+    """
+
+    static let pitchEnglish = """
+    # OpenSpeech in One Minute
+
+    ## The problem
+    Talking to a camera is easy. Remembering the script is not.
+    Your eyes jump between the script and the lens, and everyone can tell.
+
+    ## What it is
+    OpenSpeech is a teleprompter that lives in your Mac's notch.
+    Your script sits right below the camera, so reading looks like eye contact.
+
+    ## It follows you
+    It listens as you speak. Talk faster and it keeps up; pause and it waits.
+    Go off script and it holds still until you come back.
+
+    ## Ready for meetings and interviews
+    When you share your screen, nobody else can see it.
+    Split your stories into sections and jump to any of them with a keystroke.
+
+    ## Free and open source
+    OpenSpeech is free, open source, and everything stays on your Mac.
+    """
+
+    /// 英文版的面试故事库（人名是虚构的）
+    static let interviewEnglish = """
+    # Product Manager Interview
+
+    ## About me
+    Hi, I'm Alex. I'm a product manager working on team collaboration tools.
+    I like to understand the user's problem before I design anything.
+
+    ## A conflict across teams
+    We got stuck with the design team on the launch date.
+    I listed the **concerns** on both sides, then found the smallest version everyone could accept.
+    We shipped the core feature a week early, and design still had time to polish.
+
+    ## My first failed project
+    In my second year I built a campus marketplace app. After a month it had forty users.
+    Looking back, we never checked whether people needed it before we started coding.
+    Since then, I talk to five real users before I build anything.
+
+    ## Why this company
+    I've followed your work on collaboration tools for a long time.
+    I'd love to bring my product experience to a bigger platform.
+    """
+
     /// 演示 # / ## 标题：标题只是路牌，不用念；提词时按 ⌥⌘1…9 跳到第几段，或在小抄里点标题
     static let interview = """
     # 产品经理面试

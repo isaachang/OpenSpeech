@@ -180,7 +180,7 @@ final class UpdateController: NSObject, SPUUserDriver {
             x.arguments = ["-dr", "com.apple.quarantine", dest.path]
             try x.run(); x.waitUntilExit()
         } catch {
-            model.stage = .failed("没能移到「应用程序」：\(error.localizedDescription)。可以手动把 OpenSpeech 拖进「应用程序」文件夹。")
+            model.stage = .failed(tr("没能移到「应用程序」：\(error.localizedDescription)。可以手动把 OpenSpeech 拖进「应用程序」文件夹。", "Couldn't move to Applications: \(error.localizedDescription). You can drag OpenSpeech into the Applications folder yourself."))
             model.panel = .progress
             return
         }
@@ -218,11 +218,11 @@ final class UpdateController: NSObject, SPUUserDriver {
 
     private static func message(for error: NSError) -> String {
         switch error.code {
-        case Int(SUError.downloadError.rawValue): return "网络断开了，检查网络后重试"
+        case Int(SUError.downloadError.rawValue): return tr("网络断开了，检查网络后重试", "Lost the connection. Check your network and try again")
         case Int(SUError.signatureError.rawValue), Int(SUError.validationError.rawValue):
-            return "安装包没通过校验，已经丢弃。稍后再试，或者去网页下载"
+            return tr("安装包没通过校验，已经丢弃。稍后再试，或者去网页下载", "The download failed verification and was discarded. Try again later, or download from the website")
         case Int(SUError.installationWriteNoPermissionError.rawValue):
-            return "没有权限替换旧版本，把 OpenSpeech 放进「应用程序」文件夹后再试"
+            return tr("没有权限替换旧版本，把 OpenSpeech 放进「应用程序」文件夹后再试", "No permission to replace the old version. Move OpenSpeech into Applications and try again")
         default: return error.localizedDescription
         }
     }

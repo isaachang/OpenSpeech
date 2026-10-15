@@ -70,7 +70,7 @@ struct PrompterCard: View {
                 badge.fixedSize().offset(x: badgeOnLeft ? -frame.width - 14 : frame.width + 14).transition(.opacity)
             }
         }
-        .help("拖动移动 · 拖四个角调大小 · 双击回到默认位置和大小")
+        .help(tr("拖动移动 · 拖四个角调大小 · 双击回到默认位置和大小", "Drag to move · drag corners to resize · double-click to reset"))
         .animation(.easeOut(duration: 0.18), value: showChrome)
     }
 
@@ -98,7 +98,7 @@ struct PrompterCard: View {
     @ViewBuilder private var content: some View {
         let fs = settings.displayFontSize
         if case .countdown(let n) = engine.phase {
-            let hint = engine.activeMode == .voice ? "开口就开始 · 看这里 ≈ 看观众" : "按 \(Int(engine.paceSpeed)) \(engine.unitLabel) 滚动"
+            let hint = engine.activeMode == .voice ? tr("开口就开始 · 看这里 ≈ 看观众", "Start talking · looking here ≈ looking at them") : tr("按 \(Int(engine.paceSpeed)) \(engine.unitLabel) 滚动", "Scrolling at \(Int(engine.paceSpeed)) \(engine.unitLabel)")
             Group {
                 if glass {
                     VStack(spacing: 4) {
@@ -144,19 +144,19 @@ struct PrompterCard: View {
         let h = geo.degrees(forDX: pos.dx, distanceCM: PrompterSettings.viewingDistance)
         let far = v > 8 || abs(h) > 6
         let title: String = {
-            if model.resizing { return glass ? "每行 \(settings.lineChars) 字 · \(settings.visibleLines) 行" : "每行 \(settings.lineChars) 字" }
-            return "镜头下 \(String(format: "%.1f", max(0, v)))°"
+            if model.resizing { return glass ? tr("每行 \(settings.lineChars) 字 · \(settings.visibleLines) 行", "\(settings.lineChars) chars × \(settings.visibleLines) lines") : tr("每行 \(settings.lineChars) 字", "\(settings.lineChars) chars per line") }
+            return tr("镜头下 \(String(format: "%.1f", max(0, v)))°", "\(String(format: "%.1f", max(0, v)))° below camera")
         }()
         let detail: String = {
-            if model.resizing { return "拖四个角调整" }
-            if abs(pos.dx) < 0.5 { return "已对准镜头中线" }
-            return String(format: "偏%@ %.1f°", h > 0 ? "右" : "左", abs(h))
+            if model.resizing { return tr("拖四个角调整", "Drag the corners") }
+            if abs(pos.dx) < 0.5 { return tr("已对准镜头中线", "Centered on the camera") }
+            return tr(String(format: "偏%@ %.1f°", h > 0 ? "右" : "左", abs(h)), String(format: "%.1f° %@", abs(h), h > 0 ? "right" : "left"))
         }()
         return VStack(alignment: .leading, spacing: 2) {
             Text(title).font(.system(size: 13, weight: .bold, design: .rounded)).foregroundStyle(Theme.accent)
             Text(detail).font(.system(size: 10.5, weight: .medium)).foregroundColor(.white.opacity(0.6))
             if far && !model.resizing {
-                Text("离镜头较远，看稿会更明显").font(.system(size: 10.5)).foregroundColor(Theme.orange)
+                Text(tr("离镜头较远，看稿会更明显", "Far from the camera; reading will show")).font(.system(size: 10.5)).foregroundColor(Theme.orange)
             }
         }
         .monospacedDigit()
@@ -306,7 +306,7 @@ struct CardControls: View {
             RoundIcon(icon: engine.isPaused ? "play.fill" : "pause.fill", prominent: true, glass: glass) { engine.togglePause() }
             RoundIcon(icon: "chevron.down", glass: glass) { engine.jumpLines(1) }
             RoundIcon(icon: cheatOn ? "doc.text.fill" : "doc.text", glass: glass) { toggleCheat() }
-                .help("小抄：在屏幕右上角显示整篇稿子（⌥⌘O）")
+                .help(tr("小抄：在屏幕右上角显示整篇稿子（⌥⌘O）", "Cheat sheet: the whole script in a corner (⌥⌘O)"))
             RoundIcon(icon: "xmark", glass: glass) { engine.stop() }
         }
         .padding(.horizontal, 8)
@@ -663,9 +663,9 @@ struct CompactPresentingContent: View {
                         .monospacedDigit()
                         .foregroundColor(.white.opacity(0.9))
                     if engine.previewing {
-                        Text("预览").font(.system(size: 11.5, weight: .semibold)).foregroundColor(Theme.amber)
+                        Text(tr("预览", "Preview")).font(.system(size: 11.5, weight: .semibold)).foregroundColor(Theme.amber)
                     } else if engine.isPaused {
-                        Text("暂停").font(.system(size: 11.5, weight: .semibold)).foregroundColor(Theme.amber)
+                        Text(tr("暂停", "Paused")).font(.system(size: 11.5, weight: .semibold)).foregroundColor(Theme.amber)
                     } else if engine.listening {
                         Waveform(levels: engine.levels, active: engine.isSpeaking)
                     }

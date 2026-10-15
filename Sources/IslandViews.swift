@@ -20,8 +20,8 @@ struct IslandRootView: View {
     private var stateKey: String { "\(engine.phase)-\(model.hovering)-\(model.dropTargeted)-\(settings.displayStyle)" }
 
     private var hint: String? {
-        if engine.previewing { return "预览：拖动调位置 · 双击回默认 · ⌥⌘P 开始" }
-        if engine.isPaused && engine.phase == .presenting { return "已暂停 · ⌥⌘P 继续" }
+        if engine.previewing { return tr("预览：拖动调位置 · 双击回默认 · ⌥⌘P 开始", "Preview: drag to move · double-click to reset · ⌥⌘P to start") }
+        if engine.isPaused && engine.phase == .presenting { return tr("已暂停 · ⌥⌘P 继续", "Paused · ⌥⌘P to resume") }
         return nil
     }
 
@@ -30,7 +30,7 @@ struct IslandRootView: View {
         let spring = Animation.spring(response: 0.42, dampingFraction: 0.8)
         ZStack(alignment: .topLeading) {
             if let card = layout.card {
-                if layout.centered {
+                if layout.centered && !model.hideIsland {
                     // 对准镜头中线时，刘海和卡片之间一根细细的“悬挂线”
                     HangingThread(height: max(0, card.minY - model.notch.height))
                         .frame(width: model.panelSize.width, alignment: .center)
@@ -77,8 +77,10 @@ struct IslandRootView: View {
                         .transition(.opacity)
                 }
             }
-            island(layout.island)
-                .frame(width: model.panelSize.width, alignment: .top)
+            if !model.hideIsland {
+                island(layout.island)
+                    .frame(width: model.panelSize.width, alignment: .top)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         // 拖动 / 调大小时卡片要紧跟鼠标，不加弹簧
@@ -214,11 +216,12 @@ struct PeekContent: View {
                 let stats = ScriptStats(s.body)
                 HStack(alignment: .center, spacing: 8) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(s.title.isEmpty ? "未命名稿件" : s.title)
+                        Text(s.title.isEmpty ? tr("未命名稿件", "Untitled") : s.title)
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundColor(.white)
                             .lineLimit(1)
-                        Text("\(stats.countText) · 约 \(Fmt.clock(stats.duration(speed: settings.targetSpeed))) · 共 \(store.scripts.count) 篇")
+                        Text(tr("\(stats.countText) · 约 \(Fmt.clock(stats.duration(speed: settings.targetSpeed))) · 共 \(store.scripts.count) 篇",
+                                 "\(stats.countText) · ~\(Fmt.clock(stats.duration(speed: settings.targetSpeed))) · \(store.scripts.count) scripts"))
                             .font(.system(size: 11.5))
                             .foregroundColor(.white.opacity(0.5))
                     }
@@ -229,19 +232,19 @@ struct PeekContent: View {
                     }
                 }
                 HStack(spacing: 8) {
-                    IslandButton(icon: "play.fill", label: "开始提词", prominent: true, action: actions.start)
-                    IslandButton(icon: "books.vertical.fill", label: "稿件库", action: actions.openLibrary)
+                    IslandButton(icon: "play.fill", label: tr("开始提词", "Start"), prominent: true, action: actions.start)
+                    IslandButton(icon: "books.vertical.fill", label: tr("稿件库", "Library"), action: actions.openLibrary)
                     Spacer()
-                    Text("拖文件到这里导入 · ⌥⌘P")
+                    Text(tr("拖文件到这里导入 · ⌥⌘P", "Drop files here · ⌥⌘P"))
                         .font(.system(size: 10.5, weight: .medium))
                         .foregroundColor(.white.opacity(0.32))
                 }
                 .padding(.top, 12)
             } else {
-                Text("还没有稿件").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
-                Text("把 txt / md / docx / pdf 拖到刘海上，或打开稿件库新建")
+                Text(tr("还没有稿件", "No scripts yet")).font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
+                Text(tr("把 txt / md / docx / pdf 拖到刘海上，或打开稿件库新建", "Drop a txt / md / docx / pdf on the notch, or open the library"))
                     .font(.system(size: 11.5)).foregroundColor(.white.opacity(0.5)).padding(.top, 4)
-                IslandButton(icon: "books.vertical.fill", label: "打开稿件库", prominent: true, action: actions.openLibrary)
+                IslandButton(icon: "books.vertical.fill", label: tr("打开稿件库", "Open library"), prominent: true, action: actions.openLibrary)
                     .padding(.top, 12)
             }
         }
@@ -311,9 +314,9 @@ struct SpeedChip: View {
             if let v = engine.verdict {
                 let (label, color): (String, Color) = {
                     switch v {
-                    case .slow: return ("偏慢", Theme.sky)
-                    case .good: return ("正好", Theme.green)
-                    case .fast: return ("偏快", Theme.orange)
+                    case .slow: return (tr("偏慢", "Slow"), Theme.sky)
+                    case .good: return (tr("正好", "Good"), Theme.green)
+                    case .fast: return (tr("偏快", "Fast"), Theme.orange)
                     }
                 }()
                 HStack(spacing: 4) {
@@ -343,9 +346,9 @@ struct FinishedContent: View {
                     .font(.system(size: 28))
                     .foregroundStyle(Theme.accent)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("讲完啦，漂亮！").font(.system(size: 16, weight: .bold)).foregroundColor(.white)
+                    Text(tr("讲完啦，漂亮！", "Done. Nicely delivered!")).font(.system(size: 16, weight: .bold)).foregroundColor(.white)
                     if let s = summary {
-                        Text("用时 \(Fmt.clock(s.duration))" + (s.avgSpeed.map { " · 平均 \(Int($0)) \(s.unitLabel)" } ?? ""))
+                        Text(tr("用时 \(Fmt.clock(s.duration))", "Time \(Fmt.clock(s.duration))") + (s.avgSpeed.map { tr(" · 平均 \(Int($0)) \(s.unitLabel)", " · avg \(Int($0)) \(s.unitLabel)") } ?? ""))
                             .font(.system(size: 12, weight: .medium))
                             .monospacedDigit()
                             .foregroundColor(.white.opacity(0.55))
@@ -373,7 +376,7 @@ struct DropContent: View {
                     HStack(spacing: 12) {
                         Image(systemName: "arrow.down.doc.fill").font(.system(size: 24)).foregroundStyle(Theme.accent)
                         VStack(alignment: .leading, spacing: 3) {
-                            Text("松手，把稿子放进灵动岛").font(.system(size: 14, weight: .semibold)).foregroundColor(.white)
+                            Text(tr("松手，把稿子放进灵动岛", "Drop to add the script")).font(.system(size: 14, weight: .semibold)).foregroundColor(.white)
                             Text("txt · md · docx · pdf · rtf · html").font(.system(size: 11)).foregroundColor(.white.opacity(0.45))
                         }
                     }

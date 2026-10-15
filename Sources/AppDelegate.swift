@@ -22,7 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
         let args = CommandLine.arguments
         if args.contains("--no-audio") { engine.audioDisabled = true }
-        if args.contains("--demo-interview") { store.selectedID = store.scripts.first { $0.title.contains("面试") }?.id }
+        if args.contains("--demo-interview") { store.selectedID = store.scripts.first { $0.title.contains("面试") || $0.title.contains("Interview") }?.id }
 
         island = IslandController(
             engine: engine, store: store, settings: settings,
@@ -60,7 +60,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             .store(in: &bag)
         updater.start()
         if let v = updates.justUpdated {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in self?.island?.flash("✓ 已更新到 \(v)") }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in self?.island?.flash(tr("✓ 已更新到 \(v)", "✓ Updated to \(v)")) }
         }
     }
 
@@ -81,8 +81,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         guard let s = store.selected else { showLibrary(); return }
         guard !ParsedScript.parse(s.body, keys: false).units.isEmpty else {
             let a = NSAlert()
-            a.messageText = "这篇稿件还是空的"
-            a.informativeText = "先写点内容，或者导入一个文件。"
+            a.messageText = tr("这篇稿件还是空的", "This script is empty")
+            a.informativeText = tr("先写点内容，或者导入一个文件。", "Write something first, or import a file.")
             a.runModal()
             return
         }
@@ -91,17 +91,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     func importFiles(_ urls: [URL], fromIsland: Bool) {
         let (ok, errors) = store.importFiles(urls)
-        if ok > 0 && fromIsland { island?.flash(ok == 1 ? "已导入" : "已导入 \(ok) 篇") }
+        if ok > 0 && fromIsland { island?.flash(ok == 1 ? tr("已导入", "Imported") : tr("已导入 \(ok) 篇", "Imported \(ok) scripts")) }
         if !errors.isEmpty {
             let a = NSAlert()
-            a.messageText = "有文件没能导入"
+            a.messageText = tr("有文件没能导入", "Some files couldn't be imported")
             a.informativeText = errors.joined(separator: "\n")
             a.runModal()
         }
     }
 
     @objc func newScript() {
-        store.add(Script(title: "新稿件", body: ""))
+        store.add(Script(title: tr("新稿件", "New script"), body: ""))
         showLibrary()
     }
 
@@ -110,7 +110,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         p.allowsMultipleSelection = true
         p.canChooseDirectories = false
         p.allowedContentTypes = ScriptImporter.supportedExtensions.compactMap { UTType(filenameExtension: $0) }
-        p.message = "选择口播稿（txt / md / docx / pdf / rtf …）"
+        p.message = tr("选择口播稿（txt / md / docx / pdf / rtf …）", "Choose scripts (txt / md / docx / pdf / rtf …)")
         NSApp.activate(ignoringOtherApps: true)
         if p.runModal() == .OK { importFiles(p.urls, fromIsland: false) }
     }
@@ -226,61 +226,61 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         let main = NSMenu()
 
         let appMenu = NSMenu()
-        appMenu.addItem(withTitle: "关于 OpenSpeech", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
-        appMenu.addItem(item("检查更新…", #selector(checkForUpdates), ""))
-        appMenu.addItem(item("版本日志", #selector(showChangelog), ""))
+        appMenu.addItem(withTitle: tr("关于 OpenSpeech", "About OpenSpeech"), action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        appMenu.addItem(item(tr("检查更新…", "Check for Updates…"), #selector(checkForUpdates), ""))
+        appMenu.addItem(item(tr("版本日志", "Version History"), #selector(showChangelog), ""))
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "隐藏 OpenSpeech", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
-        appMenu.addItem(withTitle: "退出 OpenSpeech", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appMenu.addItem(withTitle: tr("隐藏 OpenSpeech", "Hide OpenSpeech"), action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        appMenu.addItem(withTitle: tr("退出 OpenSpeech", "Quit OpenSpeech"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         addSubmenu(appMenu, to: main)
 
-        let file = NSMenu(title: "文件")
-        file.addItem(item("新建稿件", #selector(newScript), "n"))
-        file.addItem(item("导入稿件…", #selector(importPanel), "o"))
-        let paste = item("从剪贴板新建", #selector(pasteNew), "v")
+        let file = NSMenu(title: tr("文件", "File"))
+        file.addItem(item(tr("新建稿件", "New Script"), #selector(newScript), "n"))
+        file.addItem(item(tr("导入稿件…", "Import Scripts…"), #selector(importPanel), "o"))
+        let paste = item(tr("从剪贴板新建", "New from Clipboard"), #selector(pasteNew), "v")
         paste.keyEquivalentModifierMask = [.command, .shift]
         file.addItem(paste)
         file.addItem(.separator())
-        file.addItem(item("开始 / 暂停提词（⌥⌘P）", #selector(toggleAction), ""))
-        file.addItem(item("结束提词（⌥⌘.）", #selector(stopAction), ""))
-        file.addItem(item("提词器回到默认位置和大小", #selector(resetPosition), ""))
-        file.addItem(item("显示 / 隐藏小抄（⌥⌘O）", #selector(toggleCheatSheet), ""))
+        file.addItem(item(tr("开始 / 暂停提词（⌥⌘P）", "Start / Pause (⌥⌘P)"), #selector(toggleAction), ""))
+        file.addItem(item(tr("结束提词（⌥⌘.）", "Stop (⌥⌘.)"), #selector(stopAction), ""))
+        file.addItem(item(tr("提词器回到默认位置和大小", "Reset Prompter Position and Size"), #selector(resetPosition), ""))
+        file.addItem(item(tr("显示 / 隐藏小抄（⌥⌘O）", "Show / Hide Cheat Sheet (⌥⌘O)"), #selector(toggleCheatSheet), ""))
         file.addItem(.separator())
         // 开发 / 调优用的选项，放在菜单里，不占设置面板
-        let dev = NSMenu(title: "开发者选项")
-        dev.addItem(item("记录跟随日志（只存本机）", #selector(toggleTrackingLog), ""))
-        dev.addItem(item("保存测试录音（只存本机）", #selector(toggleSaveAudio), ""))
-        dev.addItem(item("打开日志文件夹", #selector(openLogs), ""))
-        let devItem = NSMenuItem(title: "开发者选项", action: nil, keyEquivalent: "")
+        let dev = NSMenu(title: tr("开发者选项", "Developer Options"))
+        dev.addItem(item(tr("记录跟随日志（只存本机）", "Record Tracking Logs (Local Only)"), #selector(toggleTrackingLog), ""))
+        dev.addItem(item(tr("保存测试录音（只存本机）", "Save Test Recordings (Local Only)"), #selector(toggleSaveAudio), ""))
+        dev.addItem(item(tr("打开日志文件夹", "Open Logs Folder"), #selector(openLogs), ""))
+        let devItem = NSMenuItem(title: tr("开发者选项", "Developer Options"), action: nil, keyEquivalent: "")
         devItem.submenu = dev
         file.addItem(devItem)
         file.addItem(.separator())
-        file.addItem(withTitle: "关闭窗口", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        file.addItem(withTitle: tr("关闭窗口", "Close Window"), action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
         addSubmenu(file, to: main)
 
-        let edit = NSMenu(title: "编辑")
-        edit.addItem(withTitle: "撤销", action: Selector(("undo:")), keyEquivalent: "z")
-        let redo = edit.addItem(withTitle: "重做", action: Selector(("redo:")), keyEquivalent: "z")
+        let edit = NSMenu(title: tr("编辑", "Edit"))
+        edit.addItem(withTitle: tr("撤销", "Undo"), action: Selector(("undo:")), keyEquivalent: "z")
+        let redo = edit.addItem(withTitle: tr("重做", "Redo"), action: Selector(("redo:")), keyEquivalent: "z")
         redo.keyEquivalentModifierMask = [.command, .shift]
         edit.addItem(.separator())
-        edit.addItem(withTitle: "剪切", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
-        edit.addItem(withTitle: "拷贝", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
-        edit.addItem(withTitle: "粘贴", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
-        edit.addItem(withTitle: "全选", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        edit.addItem(withTitle: tr("剪切", "Cut"), action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        edit.addItem(withTitle: tr("拷贝", "Copy"), action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        edit.addItem(withTitle: tr("粘贴", "Paste"), action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        edit.addItem(withTitle: tr("全选", "Select All"), action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
         edit.addItem(.separator())
         // 和 Notion 一样：⌘⌥1 / 2 / 3 大 / 中 / 小标题，⌘⌥0 正文
-        for (title, sel, key) in [("大标题", #selector(ScriptTextView.setHeading1(_:)), "1"),
-                                  ("中标题", #selector(ScriptTextView.setHeading2(_:)), "2"),
-                                  ("小标题", #selector(ScriptTextView.setHeading3(_:)), "3"),
-                                  ("正文", #selector(ScriptTextView.setBodyText(_:)), "0")] {
+        for (title, sel, key) in [(tr("大标题", "Large Heading"), #selector(ScriptTextView.setHeading1(_:)), "1"),
+                                  (tr("中标题", "Medium Heading"), #selector(ScriptTextView.setHeading2(_:)), "2"),
+                                  (tr("小标题", "Small Heading"), #selector(ScriptTextView.setHeading3(_:)), "3"),
+                                  (tr("正文", "Body Text"), #selector(ScriptTextView.setBodyText(_:)), "0")] {
             let i = edit.addItem(withTitle: title, action: sel, keyEquivalent: key)
             i.keyEquivalentModifierMask = [.command, .option]
         }
         addSubmenu(edit, to: main)
 
-        let window = NSMenu(title: "窗口")
-        window.addItem(withTitle: "最小化", action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
-        window.addItem(item("OpenSpeech 主窗口", #selector(showLibrary), "1"))
+        let window = NSMenu(title: tr("窗口", "Window"))
+        window.addItem(withTitle: tr("最小化", "Minimize"), action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
+        window.addItem(item(tr("OpenSpeech 主窗口", "OpenSpeech Main Window"), #selector(showLibrary), "1"))
         addSubmenu(window, to: main)
 
         NSApp.mainMenu = main

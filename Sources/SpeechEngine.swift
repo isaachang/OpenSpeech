@@ -54,7 +54,7 @@ final class SpeechEngine {
         let input = audioEngine.inputNode
         let format = input.outputFormat(forBus: 0)
         guard format.sampleRate > 0, format.channelCount > 0 else {
-            throw NSError(domain: "OpenSpeech", code: 1, userInfo: [NSLocalizedDescriptionKey: "没有找到可用的麦克风"])
+            throw NSError(domain: "OpenSpeech", code: 1, userInfo: [NSLocalizedDescriptionKey: tr("没有找到可用的麦克风", "No microphone found")])
         }
         let device = AVCaptureDevice.default(for: .audio)?.localizedName ?? "?"
         let thermal = ["nominal", "fair", "serious", "critical"][min(3, ProcessInfo.processInfo.thermalState.rawValue)]
@@ -76,7 +76,7 @@ final class SpeechEngine {
         let r = SFSpeechRecognizer(locale: Locale(identifier: localeID))
         guard let r, r.isAvailable else {
             recognitionOn = false
-            DispatchQueue.main.async { self.onRecognitionFailed?("当前语言暂不可用") }
+            DispatchQueue.main.async { self.onRecognitionFailed?(tr("当前语言暂不可用", "Not available for this language")) }
             return
         }
         recognizer = r
