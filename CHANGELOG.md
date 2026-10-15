@@ -6,6 +6,19 @@ Format based on Keep a Changelog; versions follow Semantic Versioning.
 每个版本标题下面用 `>` 写一句给用户看的总结（第一行中文、第二行英文），App 里的「版本日志」和更新提示会显示它；每条的 “：” 或 “。” 之前是卡片上显示的短标题，英文界面显示条目下面那行英文。
 The `>` lines under each version (Chinese, then English) are the summary shown in the app; English UI shows the indented English line of each item.
 
+## [0.3.7] - 2026-10-15
+
+> 分段更好懂了：# 和 ## 标题都能跳，### 是小标题。
+> Sections are simpler: every # and ## heading is one you can jump to; ### is a sub-heading.
+
+### 变更 Changed
+- 分段规则：# 和 ## 都算一段，按出现的顺序编号；### 只是小标题，整篇只有 ### 时才用它分段。以前同一篇里有 ## 时，# 不算一段。
+  Section rule: every # and ## heading is a section, numbered in order; ### only when there's nothing else.
+- 换段更顺：大标题下面紧跟着小节、中间没有内容时，上一段 / 下一段直接到小节，不在空的大标题上停。
+  Smoother stepping: an empty heading right above a sub-section is skipped.
+- 段落列表里 ## 往里缩一格，看得出属于哪个 #。
+  In the section list, ## headings are indented under their #.
+
 ## [0.3.6] - 2026-10-15
 
 > 提词时一眼看到讲到第几段，点一下就能换段；稿件可以重命名、复制、导出，删了也能撤销。
