@@ -203,7 +203,7 @@ enum ReadmeSnapshot {
 
         // 首图：停在 “OpenSpeech 是什么” 这一段。画面比整块屏幕窄（放大看），卡片离刘海的距离按比例缩短（readmeZoom）
         let whatItIs = zh ? unit("摄像头") : unit("right below the camera", offset: 1)
-        render("hero", w: 1280, h: 640, cursor: whatItIs, cheat: true, lens: true)
+        render("hero", w: 1100, h: 640, cursor: whatItIs, cheat: true, lens: true)
         // 只有刘海和提词卡片、背景透明：放大 1.6 倍叠到 1800 宽的桌面截图上（共享屏幕对比图用）
         render("card-only", w: 1125, h: 703, cursor: whatItIs, transparent: true, lens: true, lensLabel: false)
     }
