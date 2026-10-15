@@ -131,8 +131,8 @@ enum ReadmeVideo {
         follow.read(zh ? "它不会乱跳等你回到稿子再接着走" : "holds still until you come back", rate: normal, .normal)
         follow.hold(1.4, .normal)
 
-        render(eye, name: "eye", dir: dir, script: pitch, size: CGSize(width: 1800, height: 560), camera: true, annotate: true, pill: false)
-        render(follow, name: "follow", dir: dir, script: pitch, size: CGSize(width: 1800, height: 560), camera: true, annotate: false, pill: true)
+        render(eye, name: "eye", dir: dir, script: pitch, size: CGSize(width: 1000, height: 560), camera: true, annotate: true, pill: false)
+        render(follow, name: "follow", dir: dir, script: pitch, size: CGSize(width: 1000, height: 560), camera: true, annotate: false, pill: true)
     }
 
     @MainActor
@@ -159,6 +159,7 @@ enum ReadmeVideo {
         model.panelSize = size
         model.snapshot = true
         model.hideIsland = true
+        settings.readmeZoom(model: model)
         let card = IslandMetrics.layout(engine: engine, model: model, settings: settings).card ?? .zero
         let store = ScriptStore(inMemory: true)
         let actions = IslandActions(start: {}, openLibrary: {}, importURLs: { _ in }, cycleScript: { _ in }, resetPosition: {})
@@ -184,7 +185,7 @@ enum ReadmeVideo {
                 if pill {
                     MomentPill(moment: m, levels: levels, speed: speed(m), fade: fade)
                         .frame(width: size.width)
-                        .offset(y: card.maxY + 30)
+                        .offset(y: card.maxY + 20)
                 }
             }
             .frame(width: size.width, height: size.height)
@@ -211,15 +212,26 @@ enum ReadmeVideo {
     }
 }
 
+extension PrompterSettings {
+    /// README 的图比整块屏幕窄（相当于放大看）：卡片和刘海按原尺寸画，
+    /// 卡片离刘海的距离按画面宽度等比例缩短，看起来和在整块屏幕上一样贴着镜头
+    func readmeZoom(model: IslandModel, screenWidth: CGFloat = 1800) {
+        let read = IslandMetrics.cardSize(self).readOffset
+        let realTop = IslandMetrics.defaultPosition(model.geo).readY - read
+        let gap = (realTop - model.notch.height) * model.panelSize.width / screenWidth
+        setPosition(CardPosition(dx: 0, readY: model.notch.height + gap + read), for: model.screenKey)
+    }
+}
+
 /// 屏幕顶上的硬件刘海，里面淡淡一颗摄像头，旁边标注 “摄像头”；
 /// annotate 时再画出视线和 “≈ 5°”：卡片正在读的那一行就在镜头下面约 5°。
-/// README 里整块屏幕宽的图会缩小到一半左右显示，所以标注文字画得比界面大
 struct CameraGuide: View {
     let notch: NotchInfo
     let cameraY: CGFloat
     let card: CGRect
     let width: CGFloat
     var annotate = true
+    var labeled = true
 
     var body: some View {
         let x = width / 2
@@ -234,34 +246,38 @@ struct CameraGuide: View {
                 .overlay(Circle().fill(.white.opacity(0.35)).frame(width: 1.6, height: 1.6).offset(x: -1.4, y: -1.4))
                 .position(x: x, y: cameraY)
             // 标注：从镜头拉一条细线到刘海右边
-            Path { p in
-                p.move(to: CGPoint(x: x + 8, y: cameraY))
-                p.addLine(to: CGPoint(x: x + notch.width / 2 + 34, y: cameraY))
-            }
-            .stroke(.white.opacity(0.55), lineWidth: 1.2)
-            Circle().fill(.white.opacity(0.8)).frame(width: 4, height: 4).position(x: x + 8, y: cameraY)
-            Text(tr("摄像头", "Camera"))
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundColor(.white.opacity(0.92))
-                .fixedSize()
-                .frame(width: 160, alignment: .leading)
-                .position(x: x + notch.width / 2 + 44 + 80, y: cameraY)
+            if labeled { label(x) }
             if annotate {
                 Path { p in
-                    p.move(to: CGPoint(x: x, y: notch.height + 8))
-                    p.addLine(to: CGPoint(x: x, y: card.minY - 8))
+                    p.move(to: CGPoint(x: x, y: notch.height + 6))
+                    p.addLine(to: CGPoint(x: x, y: card.minY - 6))
                 }
-                .stroke(.white.opacity(0.6), style: StrokeStyle(lineWidth: 2, dash: [5, 6]))
+                .stroke(.white.opacity(0.6), style: StrokeStyle(lineWidth: 1.5, dash: [4, 5]))
                 Text(tr("≈ 5°，看稿就像在看镜头", "≈ 5° — reading looks like eye contact"))
-                    .font(.system(size: 21, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.white)
                     .fixedSize()
-                    .padding(.horizontal, 18).padding(.vertical, 8)
+                    .padding(.horizontal, 12).padding(.vertical, 5)
                     .background(Capsule().fill(.white.opacity(0.16)))
-                    .position(x: x, y: (notch.height + card.minY) / 2 + 4)
+                    .position(x: x, y: (notch.height + card.minY) / 2 + 2)
             }
         }
         .frame(width: width, alignment: .topLeading)
+    }
+
+    @ViewBuilder private func label(_ x: CGFloat) -> some View {
+        Path { p in
+            p.move(to: CGPoint(x: x + 8, y: cameraY))
+            p.addLine(to: CGPoint(x: x + notch.width / 2 + 30, y: cameraY))
+        }
+        .stroke(.white.opacity(0.55), lineWidth: 1)
+        Circle().fill(.white.opacity(0.8)).frame(width: 4, height: 4).position(x: x + 8, y: cameraY)
+        Text(tr("摄像头", "Camera"))
+            .font(.system(size: 14, weight: .semibold))
+            .foregroundColor(.white.opacity(0.92))
+            .fixedSize()
+            .frame(width: 120, alignment: .leading)
+            .position(x: x + notch.width / 2 + 36 + 60, y: cameraY)
     }
 }
 
@@ -273,33 +289,33 @@ private struct MomentPill: View {
     let fade: Double
 
     var body: some View {
-        HStack(spacing: 18) {
-            HStack(alignment: .center, spacing: 4) {
+        HStack(spacing: 13) {
+            HStack(alignment: .center, spacing: 3) {
                 ForEach(levels.indices, id: \.self) { i in
                     Capsule()
                         .fill(moment.speaking ? Theme.ink : Theme.ink3.opacity(0.5))
-                        .frame(width: 5, height: 5 + 24 * levels[i])
+                        .frame(width: 3.5, height: 3.5 + 16 * levels[i])
                 }
             }
-            .frame(width: 40, height: 30)
-            HStack(spacing: 12) {
+            .frame(width: 28, height: 20)
+            HStack(spacing: 9) {
                 Text(moment.said).foregroundColor(Theme.ink)
-                Image(systemName: "arrow.right").font(.system(size: 18, weight: .bold)).foregroundColor(Theme.ink3)
+                Image(systemName: "arrow.right").font(.system(size: 13, weight: .bold)).foregroundColor(Theme.ink3)
                 Text(moment.result).foregroundColor(Theme.ink2)
             }
-            .font(.system(size: 26, weight: .semibold))
+            .font(.system(size: 17, weight: .semibold))
             .opacity(fade)
-            Rectangle().fill(Theme.ink3.opacity(0.35)).frame(width: 1.5, height: 28)
+            Rectangle().fill(Theme.ink3.opacity(0.35)).frame(width: 1, height: 18)
             Text(speed)
-                .font(.system(size: 22, weight: .semibold, design: .rounded))
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
                 .monospacedDigit()
                 .foregroundColor(Theme.ink2)
-                .frame(minWidth: 110)
+                .frame(minWidth: 74)
                 .opacity(fade)
         }
-        .padding(.horizontal, 30)
-        .frame(height: 72)
+        .padding(.horizontal, 20)
+        .frame(height: 48)
         .background(Capsule().fill(Color.white.opacity(0.9)))
-        .shadow(color: .black.opacity(0.18), radius: 22, y: 10)
+        .shadow(color: .black.opacity(0.18), radius: 16, y: 7)
     }
 }

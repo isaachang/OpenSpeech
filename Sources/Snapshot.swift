@@ -161,7 +161,7 @@ enum ReadmeSnapshot {
 
         func render(_ name: String, w: CGFloat, h: CGFloat, cursor: Double, style: DisplayStyle = .glass,
                     cheat: Bool = false, cardHovering: Bool = false, showCard: Bool = true,
-                    transparent: Bool = false, lens: Bool = false) {
+                    transparent: Bool = false, lens: Bool = false, lensLabel: Bool = true) {
             let settings = PrompterSettings(defaults: defaults)
             settings.displayStyle = style
             settings.cheatSheet = cheat
@@ -176,6 +176,7 @@ enum ReadmeSnapshot {
             model.panelSize = CGSize(width: w, height: h)
             model.snapshot = true
             model.hideIsland = true
+            settings.readmeZoom(model: model)
             model.cardHovering = cardHovering
             let s = ScriptStore(inMemory: true)
             let actions = IslandActions(start: {}, openLibrary: {}, importURLs: { _ in }, cycleScript: { _ in }, resetPosition: {})
@@ -185,7 +186,7 @@ enum ReadmeSnapshot {
                                    startPoint: .topLeading, endPoint: .bottomTrailing)
                 }
                 if lens, let card = IslandMetrics.layout(engine: engine, model: model, settings: settings).card {
-                    CameraGuide(notch: notch, cameraY: geo.cameraY, card: card, width: w, annotate: false)
+                    CameraGuide(notch: notch, cameraY: geo.cameraY, card: card, width: w, annotate: false, labeled: lensLabel)
                 }
                 if showCard {
                     IslandRootView(model: model, engine: engine, store: s, settings: settings, actions: actions, acceptsDrop: false)
@@ -200,11 +201,10 @@ enum ReadmeSnapshot {
             }
         }
 
-        // 首图 / 提词卡片：停在 “OpenSpeech 是什么” 这一段。首图用整块屏幕的宽度（14 寸 MacBook Pro 1800 pt），
-        // 卡片和摄像头的距离、占屏幕的比例都和真实默认位置一样
+        // 首图：停在 “OpenSpeech 是什么” 这一段。画面比整块屏幕窄（放大看），卡片离刘海的距离按比例缩短（readmeZoom）
         let whatItIs = zh ? unit("摄像头") : unit("right below the camera", offset: 1)
-        render("hero", w: 1800, h: 640, cursor: whatItIs, cheat: true, lens: true)
-        // 只有提词卡片、背景透明、整块屏幕大小：按真实位置叠到桌面截图上（共享屏幕对比图用）
-        render("card-only", w: 1800, h: 1125, cursor: whatItIs, transparent: true)
+        render("hero", w: 1280, h: 640, cursor: whatItIs, cheat: true, lens: true)
+        // 只有刘海和提词卡片、背景透明：放大 1.6 倍叠到 1800 宽的桌面截图上（共享屏幕对比图用）
+        render("card-only", w: 1125, h: 703, cursor: whatItIs, transparent: true, lens: true, lensLabel: false)
     }
 }
