@@ -1,13 +1,13 @@
 # OpenSpeech
 
-![version](https://img.shields.io/badge/version-0.3.0-blue) ![platform](https://img.shields.io/badge/platform-macOS%2014%2B-lightgrey) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.3.1-blue) ![platform](https://img.shields.io/badge/platform-macOS%2014%2B-lightgrey) ![license](https://img.shields.io/badge/license-MIT-green)
 
 [English](README.md) · [版本日志](CHANGELOG.md)
 
 一个住在 MacBook 刘海里、**会跟着你说话走**的开源提词器。
 适合开会、学生上台讲 presentation、录屏讲解：需要看着镜头念稿的场合都能用。
 
-> **当前状态：早期版本（v0.3.0）。** 核心的语音跟随已经可用，界面还在重新设计。
+> **当前状态：早期版本（v0.3.1）。** 核心的语音跟随已经可用，界面还在重新设计。
 
 ## 功能
 

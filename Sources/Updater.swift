@@ -66,6 +66,7 @@ final class UpdateController: NSObject, SPUUserDriver {
     /// 取消下载后再提示一次横幅
     private var reshowAfterDismiss = false
     private var resetWork: DispatchWorkItem?
+    private var started = false
 
     private static let lastRunKey = "lastRunVersion"
 
@@ -92,10 +93,19 @@ final class UpdateController: NSObject, SPUUserDriver {
         d.set(model.current, forKey: Self.lastRunKey)
 
         do { try updater.start() } catch { NSLog("OpenSpeech updater: \(error.localizedDescription)"); return }
+        started = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
             guard let self, self.updater.canCheckForUpdates else { return }
             self.updater.checkForUpdatesInBackground()
         }
+    }
+
+    /// 打开主窗口时：距离上次检查超过 1 小时就在后台再查一次。
+    /// App 关掉窗口后还留在刘海里运行，很少真正重新打开，只靠每天一次的定时检查会太慢。
+    func checkIfStale() {
+        guard started, updater.canCheckForUpdates, model.stage == .idle else { return }
+        if let last = updater.lastUpdateCheckDate, Date().timeIntervalSince(last) < 3600 { return }
+        updater.checkForUpdatesInBackground()
     }
 
     // MARK: - 按钮

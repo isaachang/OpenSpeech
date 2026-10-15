@@ -6,6 +6,14 @@ Format based on Keep a Changelog; versions follow Semantic Versioning.
 每个版本标题下面用 `>` 写一句给用户看的总结，App 里的「版本日志」和更新提示会显示它；每条的 “：” 或 “。” 之前是卡片上显示的短标题。
 The `>` line under each version is the one-line summary shown in the app.
 
+## [0.3.1] - 2026-10-15
+
+> 打开主窗口时也会检查新版本，发布后更快看到更新提示。
+
+### 改进 Changed
+- 打开主窗口时，如果距离上次检查超过 1 小时，会在后台再查一次新版本。之前只在启动时和每 24 小时查一次，而 App 关掉窗口后一直留在刘海里，很少真正重新启动。
+  Also checks for updates when the main window opens (if the last check was over an hour ago).
+
 ## [0.3.0] - 2026-10-14
 
 > 可以在 App 里一键更新了，还能随时翻看每个版本改了什么；界面换成黑白配色和新图标。

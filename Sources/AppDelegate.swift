@@ -187,6 +187,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         }
         NSApp.activate(ignoringOtherApps: true)
         libraryWindow?.makeKeyAndOrderFront(nil)
+        updater.checkIfStale()
     }
 
     // MARK: - Hotkeys & menu

@@ -1,13 +1,13 @@
 # OpenSpeech
 
-![version](https://img.shields.io/badge/version-0.3.0-blue) ![platform](https://img.shields.io/badge/platform-macOS%2014%2B-lightgrey) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.3.1-blue) ![platform](https://img.shields.io/badge/platform-macOS%2014%2B-lightgrey) ![license](https://img.shields.io/badge/license-MIT-green)
 
 [中文说明](README.zh-CN.md) · [Changelog](CHANGELOG.md)
 
 An open-source teleprompter that lives in your MacBook's notch and **follows your voice**.
 Built for meetings, student presentations, and screen recordings — any time you need to read a script while looking at the camera.
 
-> **Status: early (v0.3.0).** The core voice-following works; the UI is still being redesigned.
+> **Status: early (v0.3.1).** The core voice-following works; the UI is still being redesigned.
 
 ## Features
 
