@@ -55,6 +55,8 @@ final class IslandModel: ObservableObject {
     @Published var geo = ScreenGeo()
     @Published var hovering = false
     @Published var cardHovering = false
+    /// 鼠标停在卡片下方控制条的第几个按钮上（面板里 SwiftUI 的悬停不起作用，由 pollMouse 算出来）
+    @Published var hoveredControl: Int?
     @Published var dropTargeted = false
     @Published var flash: String?
     /// 正在拖动卡片：拖动中的位置（松手才保存）
@@ -361,6 +363,11 @@ final class IslandController {
             cardLeaveWork = w
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: w)
         }
+        var hovered: Int?
+        if model.cardHovering, !model.dragging, let ctl = layout.controls {
+            hovered = CardControls.button(at: p, in: global(ctl))
+        }
+        if model.hoveredControl != hovered { model.hoveredControl = hovered }
         cheatGlobal = layout.cheat.map(global)
         let inExtras = [layout.tip, layout.cheat, layout.cheatTip].compactMap { $0 }.contains { global($0).contains(p) }
         let interactive = inside || inCard || inExtras || model.dragging || model.cheatDragPos != nil

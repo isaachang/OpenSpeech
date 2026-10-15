@@ -47,7 +47,7 @@ struct IslandRootView: View {
                             CardHint(text: toast, icon: "checkmark.circle.fill").transition(.opacity)
                         } else if model.cardHovering && !model.dragging && engine.phase == .presenting {
                             CardControls(engine: engine, glass: settings.displayStyle == .glass,
-                                         cheatOn: settings.cheatSheet, snapshot: model.snapshot) { settings.cheatSheet.toggle() }
+                                         cheatOn: settings.cheatSheet, snapshot: model.snapshot, hovered: model.hoveredControl) { settings.cheatSheet.toggle() }
                                 .transition(.opacity)
                         } else if let hint, !model.dragging {
                             CardHint(text: hint).transition(.opacity)

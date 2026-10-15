@@ -35,7 +35,8 @@ final class UpdateModel: ObservableObject {
 
     let current = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
 
-    var showsBanner: Bool { stage == .available && !bannerDismissed && !prompting }
+    /// 更新卡片开着时不显示横幅（卡片后面不要再冒出一条 “可以更新了”）
+    var showsBanner: Bool { stage == .available && !bannerDismissed && !prompting && panel == nil }
     var hasUpdate: Bool {
         switch stage {
         case .available, .downloading, .verifying, .installing, .failed, .needsMove: return release != nil
@@ -240,6 +241,8 @@ final class UpdateController: NSObject, SPUUserDriver {
 
     func showUpdateFound(with appcastItem: SUAppcastItem, state: SPUUserUpdateState, reply: @escaping (SPUUserUpdateChoice) -> Void) {
         let notes = appcastItem.itemDescription.flatMap { Changelog.parse($0).first }
+        // 又出了更新的版本：之前关掉的横幅重新显示
+        if model.release?.version != appcastItem.displayVersionString { model.bannerDismissed = false }
         model.release = notes ?? ChangelogEntry(version: appcastItem.displayVersionString, date: appcastItem.dateString ?? "")
         model.releaseSize = appcastItem.contentLength
         foundReply = reply
@@ -251,6 +254,8 @@ final class UpdateController: NSObject, SPUUserDriver {
             // tools/test-update.sh：替用户点“立即更新”，验证整条更新链路
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in self?.install() }
         } else if state.userInitiated {
+            // 自己点 “检查更新” 查到的：直接看更新内容，不再出横幅
+            model.bannerDismissed = true
             model.panel = .notes
         }
         userInitiated = false

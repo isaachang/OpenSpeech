@@ -298,16 +298,32 @@ struct CardControls: View {
     var cheatOn = false
     /// 离屏渲染画不出系统毛玻璃，用纸色代替
     var snapshot = false
+    /// 鼠标停在第几个按钮上
+    var hovered: Int? = nil
     var toggleCheat: () -> Void = {}
 
+    static let buttonSize: CGFloat = 30
+    static let spacing: CGFloat = 8
+    static let count = 5
+
+    /// 鼠标（全局坐标）在控制条的第几个按钮上；按钮在控制条里居中排开
+    static func button(at p: CGPoint, in frame: CGRect) -> Int? {
+        let content = CGFloat(count) * buttonSize + CGFloat(count - 1) * spacing
+        let x = p.x - (frame.midX - content / 2)
+        guard abs(p.y - frame.midY) <= buttonSize / 2 + 3, x >= -3, x <= content + 3 else { return nil }
+        let i = Int((x + spacing / 2) / (buttonSize + spacing))
+        return min(max(i, 0), count - 1)
+    }
+
     var body: some View {
-        HStack(spacing: 8) {
-            RoundIcon(icon: "chevron.up", glass: glass) { engine.jumpLines(-1) }
-            RoundIcon(icon: engine.isPaused ? "play.fill" : "pause.fill", prominent: true, glass: glass) { engine.togglePause() }
-            RoundIcon(icon: "chevron.down", glass: glass) { engine.jumpLines(1) }
-            RoundIcon(icon: cheatOn ? "doc.text.fill" : "doc.text", glass: glass) { toggleCheat() }
-                .help(tr("小抄：在屏幕右上角显示整篇稿子（⌥⌘O）", "Cheat sheet: the whole script in a corner (⌥⌘O)"))
-            RoundIcon(icon: "xmark", glass: glass) { engine.stop() }
+        HStack(spacing: Self.spacing) {
+            RoundIcon(icon: "chevron.up", glass: glass, hovered: hovered == 0, tip: tr("上一行  ⌥⌘↑", "Previous line  ⌥⌘↑")) { engine.jumpLines(-1) }
+            RoundIcon(icon: engine.isPaused ? "play.fill" : "pause.fill", prominent: true, glass: glass, hovered: hovered == 1,
+                      tip: engine.isPaused ? tr("继续  ⌥⌘P", "Resume  ⌥⌘P") : tr("暂停  ⌥⌘P", "Pause  ⌥⌘P")) { engine.togglePause() }
+            RoundIcon(icon: "chevron.down", glass: glass, hovered: hovered == 2, tip: tr("下一行  ⌥⌘↓", "Next line  ⌥⌘↓")) { engine.jumpLines(1) }
+            RoundIcon(icon: cheatOn ? "doc.text.fill" : "doc.text", glass: glass, hovered: hovered == 3,
+                      tip: cheatOn ? tr("收起小抄  ⌥⌘O", "Hide cheat sheet  ⌥⌘O") : tr("小抄  ⌥⌘O", "Cheat sheet  ⌥⌘O")) { toggleCheat() }
+            RoundIcon(icon: "xmark", glass: glass, hovered: hovered == 4, tip: tr("结束  ⌥⌘.", "Stop  ⌥⌘.")) { engine.stop() }
         }
         .padding(.horizontal, 8)
         .frame(height: IslandMetrics.controlsSize.height)
@@ -322,27 +338,48 @@ struct CardControls: View {
         }
         .overlay { if glass { GlassSheen(shape: Capsule()) } else { Capsule().strokeBorder(Color.white.opacity(0.1)) } }
         .shadow(color: .black.opacity(glass ? 0.18 : 0.35), radius: 12, y: 6)
+        .animation(.easeOut(duration: 0.12), value: hovered)
     }
 }
 
+/// 控制条上的圆按钮：鼠标移上去底色加深、微微放大，下方出现它是做什么的和快捷键
 private struct RoundIcon: View {
     let icon: String
     var prominent = false
     var glass = true
+    var hovered = false
+    var tip = ""
     let action: () -> Void
+
+    private var fill: Color {
+        if prominent { return glass ? Theme.primaryFill.opacity(hovered ? 0.82 : 1) : Theme.amber.opacity(hovered ? 0.85 : 1) }
+        return glass ? Color.black.opacity(hovered ? 0.14 : 0.06) : Color.white.opacity(hovered ? 0.24 : 0.12)
+    }
 
     var body: some View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(.system(size: 11, weight: .bold))
                 .foregroundColor(prominent ? (glass ? Theme.primaryText : .black) : (glass ? Theme.ink : .white.opacity(0.9)))
-                .frame(width: 30, height: 30)
-                .background(Circle().fill(prominent
-                    ? (glass ? Theme.primaryFill : Theme.amber)
-                    : (glass ? Color.black.opacity(0.06) : Color.white.opacity(0.12))))
+                .frame(width: CardControls.buttonSize, height: CardControls.buttonSize)
+                .background(Circle().fill(fill))
+                .scaleEffect(hovered ? 1.08 : 1)
                 .contentShape(Circle())
         }
         .buttonStyle(PressStyle())
+        .overlay(alignment: .top) {
+            if hovered && !tip.isEmpty {
+                Text(tip)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.white.opacity(0.95))
+                    .padding(.horizontal, 9).frame(height: 22)
+                    .background(Capsule().fill(Color.black.opacity(0.78)))
+                    .fixedSize()
+                    .offset(y: CardControls.buttonSize + 14)
+                    .transition(.opacity)
+                    .allowsHitTesting(false)
+            }
+        }
     }
 }
 
