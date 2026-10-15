@@ -235,8 +235,6 @@ enum ReadmeSnapshot {
         let whatItIs = zh ? unit("摄像头") : unit("right below the camera", offset: 1)
         render("hero", w: 1280, h: 640, cursor: whatItIs, cheat: true)
         render("card", w: 900, h: 400, cursor: whatItIs, cardHovering: true)
-        render("heading", w: 900, h: 340, cursor: zh ? unit("它会听") : unit("it listens"))
-        render("caption", w: 900, h: 300, cursor: zh ? unit("提词器") : unit("teleprompter"), style: .caption)
         // 共享屏幕对比：你看到的（演示文稿 + 提词卡片）和对方看到的（只有演示文稿）
         render("share-you", w: 900, h: 560, cursor: whatItIs, presentation: true)
         render("share-them", w: 900, h: 560, cursor: whatItIs, showCard: false, presentation: true)

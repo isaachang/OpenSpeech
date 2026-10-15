@@ -25,13 +25,17 @@
   <img src="docs/images/hero.png" width="100%" alt="提词卡片贴在摄像头正下方，右上角是小抄">
 </p>
 
-## 为什么
+## OpenSpeech 是什么
+
+一个住在 Mac 刘海里的提词器。稿子就贴在摄像头正下方，它听你说话，自动跟着你往下走，讲快讲慢都跟得上。免费、开源，全部在本机运行。
+
+## 为什么你需要它
 
 对着镜头讲话，别人判断你是不是在念稿，只看一件事：**眼神**。
 
-看稿就得移开视线；传统提词器又要买硬件、还要有人帮你滚屏。
+看稿就得移开视线；传统提词器要买硬件、要有人帮你滚屏，你一讲快或一停顿，它就对不上了。
 
-OpenSpeech 的解法很简单：**把稿子放到离镜头最近的地方，让它自己跟着你的声音走。**
+OpenSpeech 把稿子放到离镜头最近的地方，让它自己跟着你的声音走。
 
 ---
 
@@ -39,13 +43,13 @@ OpenSpeech 的解法很简单：**把稿子放到离镜头最近的地方，让�
 
 稿子贴在摄像头正下方约 5°。正在读的字用荧光笔标出来，扫一眼就知道讲到哪了。
 
-<p align="center"><img src="docs/images/prompter-card.png" width="720" alt="提词卡片"></p>
+<p align="center"><img src="docs/images/eye.webp" width="600" alt="摄像头正下方的提词卡片，荧光笔跟着朗读往前走"></p>
 
-### 02 · 它跟着你，不用你跟着它
+### 02 · 讲快讲慢，它都跟得上
 
-本机语音识别听你讲到哪：讲快它就快，停下它就等，脱稿也不会乱跳。标题只是路牌，不用念，会自动跨过去。
+本机语音识别听你讲到哪：讲快它就快，讲慢它就慢，停下它就等你，脱稿也不会乱跳。标题只是路牌，不用念，会自动跨过去。
 
-<p align="center"><img src="docs/images/heading-signpost.png" width="720" alt="标题路牌"></p>
+<p align="center"><img src="docs/images/follow.webp" width="600" alt="讲快、讲慢、停下、脱稿时提词器的反应"></p>
 
 ### 03 · 共享屏幕时，对方看不到
 
@@ -103,7 +107,7 @@ tools/eval/run.sh   # 单元测试 + 新稿件模拟 + 本机日志回放
 - 改跟随算法时，"没见过的新稿件模拟"和"真实日志回放"都不能变差，不为单个案例加规则。
 - **发版：** 改 `VERSION`、两个 README 的版本号，在 `CHANGELOG.md` 加一条（`>` 第一行中文、第二行英文总结），运行 `tools/check-version.sh`，然后 `tools/release.sh`。
 - **App 内更新（Sparkle）：** 第一次先运行 `tools/setup-signing.sh`，签名证书和更新私钥在 `~/.openspeech-signing`，**一定要备份**。`tools/test-update.sh` 在本机把"旧版本 → 新版本"跑一遍。
-- **README 截图：** `OPENSPEECH_LANG=zh build/OpenSpeech.app/Contents/MacOS/OpenSpeech --snapshot-readme <目录>`（`en` 出英文版），用示例稿生成干净的截图。
+- **README 截图：** `OPENSPEECH_LANG=zh build/OpenSpeech.app/Contents/MacOS/OpenSpeech --snapshot-readme <目录>`（`en` 出英文版），用示例稿生成干净的截图；`--video-readme <目录>` 逐帧渲染 01、02 的演示动画。
 
 </details>
 

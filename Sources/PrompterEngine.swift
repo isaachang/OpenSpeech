@@ -412,6 +412,17 @@ final class PrompterEngine: ObservableObject {
         return unitToLine[max(0, min(u, unitToLine.count - 1))]
     }
 
+    /// 滚动该停在哪：3 行以上时，读到一行 70% 后开始平滑上移；
+    /// 1–2 行时正在读的那行在最上面，提前滑会把它滑出去，所以读完整行才换（快速过渡）
+    private func scrollGoal(cursor c: Double, line li: Int) -> Double {
+        guard settings.visibleLines >= 3 else { return Double(li) }
+        let r = lines[li].unitRange
+        var f = 0.0
+        if !r.isEmpty { f = max(0, min(1, (c - Double(r.lowerBound)) / Double(r.count))) }
+        let x = max(0, min(1, (f - 0.7) / 0.3))
+        return Double(li) + x * x * (3 - 2 * x)
+    }
+
     func handleLevel(_ db: Float, at now: CFTimeInterval = CACurrentMediaTime()) {
         latestDB = db
         let threshold = max(noiseFloor + 10, -50)
@@ -566,19 +577,8 @@ final class PrompterEngine: ObservableObject {
         let li = lineIndex(for: Int(c))
         if li != currentLine { currentLine = li }
 
-        // 滚动：3 行以上时，读到一行 70% 后开始平滑上移；
-        // 1–2 行时正在读的那行在最上面，提前滑会把它滑出去，所以读完整行才换（快速过渡）
         if li < lines.count {
-            let r = lines[li].unitRange
-            var f = 0.0
-            if !r.isEmpty { f = max(0, min(1, (c - Double(r.lowerBound)) / Double(r.count))) }
-            let goal: Double
-            if settings.visibleLines >= 3 {
-                let x = max(0, min(1, (f - 0.7) / 0.3))
-                goal = Double(li) + x * x * (3 - 2 * x)
-            } else {
-                goal = Double(li)
-            }
+            let goal = scrollGoal(cursor: c, line: li)
             let next = scroll + (goal - scroll) * min(1, dt * 11)
             if abs(next - scroll) > 0.0005 { scroll = abs(goal - next) < 0.001 ? goal : next }
         }
@@ -619,6 +619,19 @@ final class PrompterEngine: ObservableObject {
     func simulateListening(at now: CFTimeInterval) {
         listening = true
         lastTick = now
+    }
+
+    /// README 动图的一帧：直接给出读到哪、有没有在说话，滚动按真实规则平滑跟上
+    func debugFrame(cursor c: Double, dt: Double, speaking: Bool, levels lv: [CGFloat], speed: Double?) {
+        cursor = c
+        currentLine = lineIndex(for: Int(c))
+        if currentLine < lines.count {
+            let goal = scrollGoal(cursor: c, line: currentLine)
+            scroll += (goal - scroll) * min(1, dt * 11)
+        }
+        isSpeaking = speaking
+        levels = lv
+        liveSpeed = speed
     }
 
     func debugPresent(script: Script, cursor c: Double, phase ph: IslandPhase, paused: Bool = false, mode: PrompterMode = .voice, preview: Bool = false) {

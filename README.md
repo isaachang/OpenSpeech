@@ -25,13 +25,17 @@
   <img src="docs/images/en/hero.png" width="100%" alt="The prompter card right below the camera, with the cheat sheet in the corner">
 </p>
 
-## Why
+## What is OpenSpeech
+
+A teleprompter that lives in your Mac's notch. Your script sits right below the camera, and it listens as you speak and scrolls along with you, fast or slow. Free, open source, and fully on-device.
+
+## Why you need it
 
 When you talk to a camera, people judge whether you're reading by one thing: **your eyes**.
 
-Reading means looking away. Classic teleprompters need extra hardware and someone to scroll for you.
+Reading means looking away. Classic teleprompters need extra hardware and someone to scroll for you, and the moment you speed up or pause, they fall out of sync.
 
-OpenSpeech takes the simple route: **put the script as close to the lens as possible, and let it follow your voice.**
+OpenSpeech puts your script as close to the lens as possible and lets it follow your voice.
 
 ---
 
@@ -39,13 +43,13 @@ OpenSpeech takes the simple route: **put the script as close to the lens as poss
 
 Your script sits about 5° below the camera. The word you're on gets a highlighter, so one glance tells you where you are.
 
-<p align="center"><img src="docs/images/en/prompter-card.png" width="720" alt="Prompter card"></p>
+<p align="center"><img src="docs/images/en/eye.webp" width="600" alt="The prompter card right below the camera, the highlighter moving as you read"></p>
 
-### 02 · It follows you, not the other way round
+### 02 · Fast or slow, it keeps up
 
-On-device speech recognition tracks where you are. Talk faster and it keeps up; pause and it waits; go off script and it holds still. Headings are signposts you don't read aloud, and it steps right over them.
+On-device speech recognition tracks where you are. Talk faster and it speeds up; slow down and it slows too; pause and it waits; go off script and it holds still. Headings are signposts you don't read aloud, and it steps right over them.
 
-<p align="center"><img src="docs/images/en/heading-signpost.png" width="720" alt="Heading signpost"></p>
+<p align="center"><img src="docs/images/en/follow.webp" width="600" alt="How the prompter reacts when you talk faster, slow down, pause or go off script"></p>
 
 ### 03 · Invisible when you share your screen
 
@@ -103,7 +107,7 @@ tools/eval/run.sh   # unit tests + held-out simulation + replay of local logs
 - Tracking changes must not hurt the held-out simulation or the real-log replay — no rules tuned for a single case.
 - **Releasing:** bump `VERSION` and the badge in both READMEs, add a `CHANGELOG.md` entry (`>` Chinese summary, then English), run `tools/check-version.sh`, then `tools/release.sh`.
 - **In-app updates (Sparkle):** run `tools/setup-signing.sh` once; the signing certificate and update key live in `~/.openspeech-signing` — **back it up**. `tools/test-update.sh` runs a full old → new update locally.
-- **README screenshots:** `OPENSPEECH_LANG=en build/OpenSpeech.app/Contents/MacOS/OpenSpeech --snapshot-readme <dir>` (`zh` for Chinese) renders clean shots from the sample scripts.
+- **README screenshots:** `OPENSPEECH_LANG=en build/OpenSpeech.app/Contents/MacOS/OpenSpeech --snapshot-readme <dir>` (`zh` for Chinese) renders clean shots from the sample scripts; `--video-readme <dir>` renders the frames of the 01 and 02 demo animations.
 
 </details>
 
