@@ -101,6 +101,7 @@ curl -fsSL https://raw.githubusercontent.com/isaachang/OpenSpeech/main/install.s
 | --- | --- |
 | `⌥⌘P` | 开始 / 暂停 |
 | `⌥⌘↑` `⌥⌘↓` | 上一行 / 下一行 |
+| `⌥⌘←` `⌥⌘→` | 上一段 / 下一段 |
 | `⌥⌘1…9` | 跳到第几段 |
 | `⌥⌘O` | 小抄 |
 | `⌥⌘.` | 结束 |

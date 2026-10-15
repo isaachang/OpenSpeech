@@ -69,12 +69,52 @@ final class ScriptStore: ObservableObject {
         selectedID = s.id
     }
 
+    /// 刚删掉的那篇：底部 “已删除 · 撤销” 用，几秒后清掉
+    @Published private(set) var lastDeleted: DeletedScript?
+    /// 稿件菜单里点了 “重命名”：编辑区把光标放到标题上
+    @Published var renameRequest: UUID?
+
+    struct DeletedScript: Equatable {
+        let script: Script
+        let index: Int
+    }
+
     func delete(_ id: UUID) {
         guard let idx = scripts.firstIndex(where: { $0.id == id }) else { return }
+        lastDeleted = DeletedScript(script: scripts[idx], index: idx)
         scripts.remove(at: idx)
         if selectedID == id {
             selectedID = scripts.isEmpty ? nil : scripts[min(idx, scripts.count - 1)].id
         }
+    }
+
+    func undoDelete() {
+        guard let d = lastDeleted else { return }
+        scripts.insert(d.script, at: min(d.index, scripts.count))
+        selectedID = d.script.id
+        lastDeleted = nil
+    }
+
+    /// 撤销提示自己消失时调用；只清掉还是这一篇的那条
+    func forgetDeleted(_ id: UUID) {
+        if lastDeleted?.script.id == id { lastDeleted = nil }
+    }
+
+    /// 复制一份，放在原稿下面
+    func duplicate(_ id: UUID) {
+        guard let idx = scripts.firstIndex(where: { $0.id == id }) else { return }
+        var copy = scripts[idx]
+        copy.id = UUID()
+        copy.title = tr("\(copy.title) 副本", "\(copy.title) copy")
+        copy.createdAt = Date()
+        copy.updatedAt = Date()
+        scripts.insert(copy, at: idx + 1)
+        selectedID = copy.id
+    }
+
+    func rename(_ id: UUID) {
+        selectedID = id
+        renameRequest = id
     }
 
     func cycleSelection(_ delta: Int) {

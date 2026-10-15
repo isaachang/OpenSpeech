@@ -57,6 +57,10 @@ final class IslandModel: ObservableObject {
     @Published var cardHovering = false
     /// 鼠标停在卡片下方控制条的第几个按钮上（面板里 SwiftUI 的悬停不起作用，由 pollMouse 算出来）
     @Published var hoveredControl: Int?
+    /// 鼠标在面板里的位置（左上角为原点）；不在卡片、小抄这些能点的地方时为 nil。用来给面板里的按钮做悬停效果
+    @Published var mouse: CGPoint?
+    /// 卡片顶上点段名弹出的段落列表
+    @Published var sectionMenuOpen = false
     @Published var dropTargeted = false
     @Published var flash: String?
     /// 正在拖动卡片：拖动中的位置（松手才保存）
@@ -92,6 +96,8 @@ struct IslandLayout: Equatable {
     var cheat: CGRect?
     /// 第一次打开小抄时旁边的“可以拖动”提示
     var cheatTip: CGRect?
+    /// 卡片顶上点段名弹出的段落列表
+    var sectionMenu: CGRect?
 }
 
 enum IslandMetrics {
@@ -174,7 +180,10 @@ enum IslandMetrics {
         return CGRect(x: card.midX - s.width / 2, y: y, width: s.width, height: s.height)
     }
 
-    static func layout(phase: IslandPhase, hovering: Bool, dropTargeted: Bool, hasToast: Bool,
+    static let sectionRowHeight: CGFloat = 30
+    static let sectionMenuWidth: CGFloat = 290
+
+    static func layout(phase: IslandPhase, hovering: Bool, dropTargeted: Bool, hasToast: Bool, sections: Int = 0,
                        model: IslandModel, settings: PrompterSettings) -> IslandLayout {
         let notch = model.notch
         if dropTargeted { return IslandLayout(island: CGSize(width: peekWidth, height: notch.height + 112)) }
@@ -193,6 +202,11 @@ enum IslandMetrics {
                                  controls: controlsFrame(card: card, panel: model.panelSize),
                                  centered: abs(card.midX - model.panelSize.width / 2) < 0.5)
             if settings.showsCardTip && !model.dragging && !model.snapshot { l.tip = tipFrame(card: card, panel: model.panelSize) }
+            if model.sectionMenuOpen && sections > 0 && phase == .presenting {
+                let w = min(sectionMenuWidth, model.panelSize.width - 16)
+                let x = min(max(card.midX - w / 2, 8), model.panelSize.width - w - 8)
+                l.sectionMenu = CGRect(x: x, y: card.minY + 28, width: w, height: CGFloat(min(sections, 10)) * sectionRowHeight + 12)
+            }
             if settings.cheatSheet {
                 let c = cheatFrame(panel: model.panelSize, notch: notch,
                                    origin: model.cheatDragPos ?? settings.cheatPosition(for: model.screenKey))
@@ -207,7 +221,7 @@ enum IslandMetrics {
 
     static func layout(engine: PrompterEngine, model: IslandModel, settings: PrompterSettings) -> IslandLayout {
         layout(phase: engine.phase, hovering: model.hovering, dropTargeted: model.dropTargeted, hasToast: engine.toast != nil,
-               model: model, settings: settings)
+               sections: settings.displayStyle == .glass ? engine.parsed.sections.count : 0, model: model, settings: settings)
     }
 }
 
@@ -349,6 +363,7 @@ final class IslandController {
             // 四个角的拖柄在卡片外面一点；悬停时把下方控制条也算进来，鼠标移过去不会消失
             var area = c.insetBy(dx: -14, dy: -14)
             if model.cardHovering, let ctl = layout.controls { area = area.union(ctl.insetBy(dx: -6, dy: -6)) }
+            if let m = layout.sectionMenu { area = area.union(m.insetBy(dx: -6, dy: -6)) }
             inCard = global(area).contains(p)
         }
         if inCard || model.dragging {
@@ -358,6 +373,7 @@ final class IslandController {
         } else if model.cardHovering && cardLeaveWork == nil {
             let w = DispatchWorkItem { [weak self] in
                 self?.model.cardHovering = false
+                self?.model.sectionMenuOpen = false
                 self?.cardLeaveWork = nil
             }
             cardLeaveWork = w
@@ -369,8 +385,10 @@ final class IslandController {
         }
         if model.hoveredControl != hovered { model.hoveredControl = hovered }
         cheatGlobal = layout.cheat.map(global)
-        let inExtras = [layout.tip, layout.cheat, layout.cheatTip].compactMap { $0 }.contains { global($0).contains(p) }
+        let inExtras = [layout.tip, layout.cheat, layout.cheatTip, layout.sectionMenu].compactMap { $0 }.contains { global($0).contains(p) }
         let interactive = inside || inCard || inExtras || model.dragging || model.cheatDragPos != nil
+        let local: CGPoint? = (inCard || inExtras) ? CGPoint(x: p.x - f.minX, y: f.maxY - p.y) : nil
+        if model.mouse != local { model.mouse = local }
         updateCursor(p, layout: layout, global: global)
         if panel.ignoresMouseEvents == interactive { panel.ignoresMouseEvents = !interactive }
 
@@ -391,6 +409,10 @@ final class IslandController {
 
     /// 光标：平时箭头；拖动条 / 小抄的六个小点上是张开的手，拖动时握住的手，四个角是斜向箭头。
     /// 面板不会变成当前窗口，系统的悬停事件进不来，所以和悬停检测一起在定时器里做，每次都重新设一遍
+    private var hasSectionNav: Bool {
+        settings.displayStyle == .glass && engine.phase == .presenting && !engine.parsed.sections.isEmpty
+    }
+
     private func updateCursor(_ p: CGPoint, layout: IslandLayout, global: (CGRect) -> CGRect) {
         var cursor: NSCursor?
         if model.dragPos != nil || model.cheatDragPos != nil {
@@ -399,7 +421,8 @@ final class IslandController {
             let corners: [(CGPoint, Bool, Bool)] = [(CGPoint(x: c.minX, y: c.maxY), true, true), (CGPoint(x: c.maxX, y: c.maxY), true, false),
                                                     (CGPoint(x: c.minX, y: c.minY), false, true), (CGPoint(x: c.maxX, y: c.minY), false, false)]
             // 和 macOS 窗口标题栏一样：整张卡片都能拖，但平时是箭头；只有顶部那条拖动条上是张开的手
-            let grab = CGRect(x: c.midX - 40, y: c.maxY - 22, width: 80, height: 22)
+            // 有段落导航时卡片顶上放的是段名，不显示拖动条
+            let grab = layout.sectionMenu == nil && !hasSectionNav ? CGRect(x: c.midX - 40, y: c.maxY - 22, width: 80, height: 22) : .zero
             if let k = corners.first(where: { hypot($0.0.x - p.x, $0.0.y - p.y) < 16 }) {
                 cursor = CardCursor.resize(top: k.1, left: k.2)
             } else if grab.contains(p) {

@@ -77,17 +77,27 @@ private struct Sidebar: View {
             ScrollView {
                 LazyVStack(spacing: 2) {
                     ForEach(store.scripts) { s in
-                        ScriptRow(script: s, speed: settings.targetSpeed, selected: s.id == store.selectedID)
+                        ScriptRow(store: store, script: s, speed: settings.targetSpeed, selected: s.id == store.selectedID)
                             .onTapGesture { store.selectedID = s.id }
-                            .contextMenu {
-                                Button(tr("删除", "Delete"), role: .destructive) { store.delete(s.id) }
-                            }
+                            .contextMenu { ScriptMenuItems(store: store, script: s) }
                     }
                 }
             }
         }
         .padding(.horizontal, 12)
         .padding(.bottom, 12)
+        .overlay(alignment: .bottom) {
+            if let d = store.lastDeleted {
+                UndoToast(title: d.script.title, undo: store.undoDelete)
+                    .padding(.horizontal, 12).padding(.bottom, 12)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .task(id: d.script.id) {
+                        try? await Task.sleep(nanoseconds: 6_000_000_000)
+                        withAnimation(.easeOut(duration: 0.25)) { store.forgetDeleted(d.script.id) }
+                    }
+            }
+        }
+        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: store.lastDeleted)
         .background(Theme.paperSide)
         .overlay(alignment: .trailing) { Rectangle().fill(Theme.line).frame(width: 1).ignoresSafeArea() }
     }
@@ -112,9 +122,12 @@ private struct IconButton: View {
 }
 
 private struct ScriptRow: View {
+    @ObservedObject var store: ScriptStore
     let script: Script
     let speed: Double
     let selected: Bool
+    @State private var hover = false
+    @State private var menuHover = false
 
     var body: some View {
         let stats = ScriptStats(script.body)
@@ -127,10 +140,86 @@ private struct ScriptRow: View {
                 .foregroundColor(Theme.ink3)
         }
         .padding(.vertical, 9)
-        .padding(.horizontal, 12)
+        .padding(.leading, 12)
+        .padding(.trailing, hover || selected ? 38 : 12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 9).fill(selected ? Theme.selRow : .clear))
+        .background(RoundedRectangle(cornerRadius: 9).fill(selected ? Theme.selRow : hover ? Theme.wash : .clear))
+        .overlay(alignment: .trailing) {
+            // 「⋯」：重命名、复制一份、导出、删除。移开鼠标只是变透明，菜单打开时不会被拿掉
+            Menu { ScriptMenuItems(store: store, script: script) } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(Theme.ink2)
+                    .frame(width: 24, height: 24)
+                    .background(RoundedRectangle(cornerRadius: 7).fill(Color.black.opacity(menuHover ? 0.11 : 0.05)))
+                    .contentShape(Rectangle())
+            }
+            .menuStyle(.button)
+            .buttonStyle(.plain)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .onHover { menuHover = $0 }
+            .help(tr("更多：重命名、复制、导出、删除", "More: rename, duplicate, export, delete"))
+            .padding(.trailing, 8)
+            .opacity(hover || selected ? 1 : 0)
+        }
         .contentShape(Rectangle())
+        .onHover { hover = $0 }
+        .animation(.easeOut(duration: 0.12), value: hover)
+    }
+}
+
+/// 稿件的「⋯」菜单和右键菜单
+private struct ScriptMenuItems: View {
+    let store: ScriptStore
+    let script: Script
+
+    var body: some View {
+        Button(tr("重命名", "Rename")) { store.rename(script.id) }
+        Button(tr("复制一份", "Duplicate")) { store.duplicate(script.id) }
+        Button(tr("导出为 Markdown…", "Export as Markdown…")) { ScriptExport.markdown(script) }
+        Divider()
+        Button(tr("删除", "Delete"), role: .destructive) { store.delete(script.id) }
+    }
+}
+
+/// 删掉以后侧栏底部的 “已删除 · 撤销”，几秒后自己消失
+private struct UndoToast: View {
+    let title: String
+    let undo: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text(tr("已删除「\(title.isEmpty ? "未命名稿件" : title)」", "Deleted \u{201C}\(title.isEmpty ? "Untitled" : title)\u{201D}"))
+                .font(.system(size: 11.5))
+                .foregroundColor(.white.opacity(0.88))
+                .lineLimit(1)
+                .truncationMode(.middle)
+            Spacer(minLength: 4)
+            Button(action: undo) {
+                Text(tr("撤销", "Undo")).font(.system(size: 11.5, weight: .bold)).foregroundColor(.white)
+                    .padding(.horizontal, 10).frame(height: 22)
+                    .background(Capsule().fill(Color.white.opacity(0.16)))
+            }
+            .buttonStyle(PressStyle())
+        }
+        .padding(.leading, 12).padding(.trailing, 8).frame(height: 38)
+        .background(RoundedRectangle(cornerRadius: 10).fill(Theme.ink))
+        .shadow(color: .black.opacity(0.18), radius: 10, y: 5)
+    }
+}
+
+/// 把稿子存成 .md 文件
+enum ScriptExport {
+    static func markdown(_ s: Script) {
+        let panel = NSSavePanel()
+        let name = (s.title.isEmpty ? tr("未命名稿件", "Untitled") : s.title).replacingOccurrences(of: "/", with: "-")
+        panel.nameFieldStringValue = name + ".md"
+        panel.allowedContentTypes = [UTType(filenameExtension: "md") ?? .plainText]
+        panel.begin { r in
+            guard r == .OK, let url = panel.url else { return }
+            try? s.body.write(to: url, atomically: true, encoding: .utf8)
+        }
     }
 }
 
@@ -141,6 +230,7 @@ private struct EditorPane: View {
     @ObservedObject var settings: PrompterSettings
     let updates: UpdateModel
     let actions: LibraryActions
+    @FocusState private var titleFocused: Bool
 
     private var binding: Binding<Script>? {
         guard let id = store.selectedID, store.scripts.contains(where: { $0.id == id }) else { return nil }
@@ -164,6 +254,12 @@ private struct EditorPane: View {
                 TextField(tr("稿件标题", "Script title"), text: b.title)
                     .textFieldStyle(.plain)
                     .font(.system(size: 24, weight: .bold))
+                    .focused($titleFocused)
+                    .onChange(of: store.renameRequest) { id in
+                        guard id != nil else { return }
+                        titleFocused = true
+                        store.renameRequest = nil
+                    }
 
                 HStack(spacing: 6) {
                     Text(tr("\(stats.countText) · 约 \(Fmt.clock(stats.duration(speed: settings.targetSpeed))) · \(stats.isLatin ? "English" : "中文")",

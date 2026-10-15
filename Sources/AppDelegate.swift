@@ -204,8 +204,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         hk.register(.period) { [weak self] in self?.engine.stop() }
         hk.register(.up) { [weak self] in self?.engine.jumpLines(-1) }
         hk.register(.down) { [weak self] in self?.engine.jumpLines(1) }
-        hk.register(.left) { [weak self] in self?.engine.adjustSpeed(-10) }
-        hk.register(.right) { [weak self] in self?.engine.adjustSpeed(10) }
+        // ⌥⌘← / ⌥⌘→：稿子有 # 标题时切上一段 / 下一段，没有标题时照旧调匀速语速
+        hk.register(.left) { [weak self] in self?.stepSectionOrSpeed(-1) }
+        hk.register(.right) { [weak self] in self?.stepSectionOrSpeed(1) }
         hk.register(.o) { [weak self] in self?.toggleCheatSheet() }
         // ⌥⌘1…9 只在提词、而且稿子里有标题时才占用；平时还给别的 App
         engine.$phase.combineLatest(engine.$parsed)
@@ -213,6 +214,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             .removeDuplicates()
             .sink { [weak self] n in self?.updateSectionKeys(n) }
             .store(in: &bag)
+    }
+
+    private func stepSectionOrSpeed(_ d: Int) {
+        if engine.parsed.sections.isEmpty { engine.adjustSpeed(Double(d) * 10) } else { engine.stepSection(d) }
     }
 
     private func updateSectionKeys(_ count: Int) {

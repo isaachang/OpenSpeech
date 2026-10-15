@@ -101,6 +101,7 @@ Or just send this repo's link to an AI assistant (Claude Code, Codex, Cursor…)
 | --- | --- |
 | `⌥⌘P` | Start / pause |
 | `⌥⌘↑` `⌥⌘↓` | Previous / next line |
+| `⌥⌘←` `⌥⌘→` | Previous / next section |
 | `⌥⌘1…9` | Jump to a section |
 | `⌥⌘O` | Cheat sheet |
 | `⌥⌘.` | Stop |

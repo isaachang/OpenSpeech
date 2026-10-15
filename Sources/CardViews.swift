@@ -46,10 +46,14 @@ struct PrompterCard: View {
                     progress.padding(.horizontal, 22).padding(.bottom, 9)
                 }
             }
-            if glass && !showChrome && !engine.phase.isCountdown {
+            if glass && engine.phase == .presenting && !engine.parsed.sections.isEmpty {
+                // 有 # 标题的稿子：顶上放第几段和段名，代替 logo 和拖动条（整张卡片照样能拖）
+                SectionNav(engine: engine, model: model, expanded: showChrome, maxWidth: frame.width - 48)
+                    .padding(.top, 4)
+            } else if glass && !showChrome && !engine.phase.isCountdown {
                 CardBrand().padding(.top, 8).transition(.opacity)
             }
-            if showChrome {
+            if showChrome && !(glass && engine.phase == .presenting && !engine.parsed.sections.isEmpty) {
                 Capsule().fill((glass ? Theme.ink : .white).opacity(dragStart != nil ? 0.55 : 0.28))
                     .frame(width: 38, height: 4)
                     .padding(.top, glass ? 9 : 4)

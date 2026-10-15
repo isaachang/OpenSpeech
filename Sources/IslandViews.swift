@@ -10,6 +10,9 @@ struct IslandActions {
 }
 
 struct IslandRootView: View {
+    /// 面板的坐标系：model.mouse 用的就是它（左上角为原点）
+    static let space = "panel"
+
     @ObservedObject var model: IslandModel
     @ObservedObject var engine: PrompterEngine
     @ObservedObject var store: ScriptStore
@@ -65,6 +68,12 @@ struct IslandRootView: View {
                         .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .leading)))
                 }
             }
+            if let m = layout.sectionMenu {
+                SectionMenu(engine: engine, model: model)
+                    .frame(width: m.width, height: m.height, alignment: .top)
+                    .offset(x: m.minX, y: m.minY)
+                    .transition(.opacity.combined(with: .offset(y: -6)))
+            }
             if let ch = layout.cheat {
                 CheatSheet(engine: engine, move: CheatMove(model: model, settings: settings, frame: ch)) { settings.cheatSheet = false }
                     .frame(width: ch.width, height: ch.height)
@@ -83,6 +92,7 @@ struct IslandRootView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .coordinateSpace(name: Self.space)
         // 拖动 / 调大小时卡片要紧跟鼠标，不加弹簧
         .animation(model.dragging || model.cheatDragPos != nil ? nil : spring, value: layout)
         .animation(spring, value: stateKey)

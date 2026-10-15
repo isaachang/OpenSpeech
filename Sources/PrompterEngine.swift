@@ -242,6 +242,15 @@ final class PrompterEngine: ObservableObject {
         showToast("→ \(n + 1)  \(secs[n].title)", duration: 1.6)
     }
 
+    /// 现在在第几段（从 0 开始；还在第一个标题之前是 nil）
+    var currentSection: Int? { parsed.section(at: Int(cursor)) }
+
+    /// ⌥⌘← / ⌥⌘→、卡片顶上的 ‹ ›：上一段 / 下一段
+    func stepSection(_ d: Int) {
+        let n = d > 0 ? (currentSection ?? -1) + 1 : (currentSection ?? 0) - 1
+        jump(toSection: n)
+    }
+
     func adjustSpeed(_ d: Double) {
         settings.targetSpeed = max(100, min(400, settings.targetSpeed + d))
         if phase.isActive { showToast(tr("匀速语速 \(Int(paceSpeed)) \(unitLabel)", "Speed \(Int(paceSpeed)) \(unitLabel)"), duration: 1.6) }
