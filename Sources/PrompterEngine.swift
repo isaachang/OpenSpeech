@@ -343,6 +343,7 @@ final class PrompterEngine: ObservableObject {
                 self.showToast(tr("没有语音识别权限，已切到智能匀速（系统设置 › 隐私与安全性 › 语音识别）", "No speech recognition access; using constant speed (System Settings › Privacy & Security › Speech Recognition)"), duration: 6)
             }
             self.speech.recordURL = self.settings.saveAudio ? self.logger.audioURL : nil
+            self.speech.echoReduction = self.settings.echoReduction
             do {
                 try self.speech.start(localeID: self.parsed.localeID, recognition: recognition)
                 self.listening = true

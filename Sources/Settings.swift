@@ -57,6 +57,8 @@ final class PrompterSettings: ObservableObject {
     @Published var countdown: Bool { didSet { d.set(countdown, forKey: "countdown") } }
     @Published var pauseOnSilence: Bool { didSet { d.set(pauseOnSilence, forKey: "pauseOnSilence") } }
     @Published var hideFromCapture: Bool { didSet { d.set(hideFromCapture, forKey: "hideFromCapture") } }
+    /// 开会时减少外放回声（默认关；下次开始提词时生效）
+    @Published var echoReduction: Bool { didSet { d.set(echoReduction, forKey: "echoReduction") } }
     /// 显示在哪块屏幕：空 = 自动（优先带刘海 / 摄像头的屏幕）
     @Published var screenID: String { didSet { d.set(screenID, forKey: "screenID") } }
     @Published var trackingLog: Bool { didSet { d.set(trackingLog, forKey: "trackingLog") } }
@@ -97,6 +99,7 @@ final class PrompterSettings: ObservableObject {
         countdown = d.object(forKey: "countdown") as? Bool ?? true
         pauseOnSilence = d.object(forKey: "pauseOnSilence") as? Bool ?? true
         hideFromCapture = d.object(forKey: "hideFromCapture") as? Bool ?? true
+        echoReduction = d.bool(forKey: "echoReduction")
         screenID = d.string(forKey: "screenID") ?? ""
         trackingLog = d.object(forKey: "trackingLog") as? Bool ?? true
         saveAudio = d.object(forKey: "saveAudio") as? Bool ?? false

@@ -6,6 +6,29 @@ Format based on Keep a Changelog; versions follow Semantic Versioning.
 每个版本标题下面用 `>` 写一句给用户看的总结（第一行中文、第二行英文），App 里的「版本日志」和更新提示会显示它；每条的 “：” 或 “。” 之前是卡片上显示的短标题，英文界面显示条目下面那行英文。
 The `>` lines under each version (Chinese, then English) are the summary shown in the app; English UI shows the indented English line of each item.
 
+## [0.3.6] - 2026-10-15
+
+> 提词时一眼看到讲到第几段，点一下就能换段；稿件可以重命名、复制、导出，删了也能撤销。
+> See which section you're on and switch with a click; rename, duplicate or export scripts, and undo a delete.
+
+### 新增 Added
+- 段落导航：有 # 标题的稿子，卡片顶上显示“第几段 · 段名”；鼠标移上去出现 ‹ ›，点段名弹出所有段落，点哪段跳哪段。
+  Section navigation: the card shows which section you're on; ‹ › and a list of sections to jump to.
+- 上一段 / 下一段快捷键：⌥⌘← / ⌥⌘→，不用数是第几段。
+  Previous / next section: ⌥⌘← and ⌥⌘→, no need to count sections.
+- 稿件菜单：每篇稿子右边的「⋯」和右键菜单里可以重命名、复制一份、导出为 Markdown、删除；删除后底部可以撤销。
+  Script menu: rename, duplicate, export or delete from the "⋯" button; undo after deleting.
+- 开会时减少外放回声：设置里新增这个开关，默认关；用扬声器外放开会时打开，麦克风不再把对方的声音当成你在说话。
+  Reduce speaker echo in meetings: a new setting, off by default, that keeps other people's voices out of the mic.
+
+### 变更 Changed
+- 提词卡片下方的按钮有悬停反馈：鼠标移上去按钮变深、略微放大，下面显示它的作用和快捷键。
+  Card buttons respond on hover and show what they do and their shortcut.
+
+### 修复 Fixed
+- 自己点「检查更新」时，更新卡片后面不再同时冒出“可以更新了”的横幅。
+  No update banner behind the update card after Check for Updates.
+
 ## [0.3.5] - 2026-10-15
 
 > Zoom 提醒更清楚了：平时只占一行，点「查看」就能看到三步怎么改。

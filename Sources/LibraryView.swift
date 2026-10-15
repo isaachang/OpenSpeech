@@ -346,6 +346,9 @@ private struct SettingsPane: View {
 
             SwitchRow(title: tr("共享屏幕时隐藏", "Hide when sharing screen"), isOn: $settings.hideFromCapture)
                 .help(tr("录屏、共享屏幕时对方看不到提词器", "Others can't see the prompter in recordings or screen shares"))
+            SwitchRow(title: tr("开会时减少外放回声", "Reduce speaker echo in meetings"), isOn: $settings.echoReduction)
+                .help(tr("用扬声器外放开会时打开：麦克风不再把对方的声音当成你在说话。戴耳机不需要。下次开始提词时生效。",
+                         "Turn on when meeting audio plays through your speakers, so the mic doesn't pick up other people. Not needed with headphones. Takes effect next time you start."))
             SwitchRow(title: tr("开始前倒计时", "Countdown before start"), isOn: $settings.countdown)
 
             HStack {

@@ -15,6 +15,10 @@ final class SpeechEngine {
     /// 打开时把麦克风声音存成文件（只用于离线调优，默认不开）
     var recordURL: URL?
     private var recordFile: AVAudioFile?
+    /// 开会外放时减少回声：打开 macOS 的语音处理（和 FaceTime 一样），把扬声器放出来的声音从麦克风里减掉
+    var echoReduction = false
+    /// 语音处理打开后麦克风会变成多声道，处理过的人声在第一个声道：只把它交给识别
+    private var monoFormat: AVAudioFormat?
 
     private let audioEngine = AVAudioEngine()
     private var recognizer: SFSpeechRecognizer?
@@ -52,6 +56,7 @@ final class SpeechEngine {
     func start(localeID: String, recognition: Bool) throws {
         stop()
         let input = audioEngine.inputNode
+        setVoiceProcessing(input)
         let format = input.outputFormat(forBus: 0)
         guard format.sampleRate > 0, format.channelCount > 0 else {
             throw NSError(domain: "OpenSpeech", code: 1, userInfo: [NSLocalizedDescriptionKey: tr("没有找到可用的麦克风", "No microphone found")])
@@ -59,8 +64,10 @@ final class SpeechEngine {
         let device = AVCaptureDevice.default(for: .audio)?.localizedName ?? "?"
         let thermal = ["nominal", "fair", "serious", "critical"][min(3, ProcessInfo.processInfo.thermalState.rawValue)]
         onEvent?("input: \(device) · \(Int(format.sampleRate))Hz · \(format.channelCount)ch · thermal \(thermal)")
+        monoFormat = format.channelCount > 1
+            ? AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: format.sampleRate, channels: 1, interleaved: false) : nil
         if let recordURL {
-            recordFile = try? AVAudioFile(forWriting: recordURL, settings: format.settings)
+            recordFile = try? AVAudioFile(forWriting: recordURL, settings: (monoFormat ?? format).settings)
         }
         input.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
             self?.process(buffer)
@@ -83,6 +90,31 @@ final class SpeechEngine {
         preferOnDevice = r.supportsOnDeviceRecognition
         onEvent?(preferOnDevice ? "start: on-device" : "start: server")
         startTask()
+    }
+
+    /// 语音处理要在开始录音前设好；系统不支持就照常用原始声音
+    private func setVoiceProcessing(_ input: AVAudioInputNode) {
+        guard input.isVoiceProcessingEnabled != echoReduction else { return }
+        do {
+            try input.setVoiceProcessingEnabled(echoReduction)
+            if echoReduction {
+                // 尽量不压低会议等其他 App 的声音
+                input.voiceProcessingOtherAudioDuckingConfiguration =
+                    AVAudioVoiceProcessingOtherAudioDuckingConfiguration(enableAdvancedDucking: false, duckingLevel: .min)
+            }
+            onEvent?("voice processing: \(echoReduction ? "on" : "off")")
+        } catch {
+            onEvent?("voice processing failed: \(error.localizedDescription)")
+        }
+    }
+
+    private func firstChannel(of b: AVAudioPCMBuffer) -> AVAudioPCMBuffer? {
+        guard let monoFormat, let src = b.floatChannelData?[0],
+              let out = AVAudioPCMBuffer(pcmFormat: monoFormat, frameCapacity: b.frameLength),
+              let dst = out.floatChannelData?[0] else { return nil }
+        out.frameLength = b.frameLength
+        dst.update(from: src, count: Int(b.frameLength))
+        return out
     }
 
     /// 开始一段新的识别。
@@ -208,7 +240,8 @@ final class SpeechEngine {
         }
     }
 
-    private func process(_ buffer: AVAudioPCMBuffer) {
+    private func process(_ input: AVAudioPCMBuffer) {
+        let buffer = firstChannel(of: input) ?? input
         lock.lock()
         let r = request
         let o = overlapRequest
