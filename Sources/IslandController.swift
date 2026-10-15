@@ -61,6 +61,10 @@ final class IslandModel: ObservableObject {
     @Published var dragPos: CardPosition?
     /// 正在拖角调大小
     @Published var resizing = false
+    /// 卡片下方一闪而过的确认（比如双击后“已回到默认位置和大小”）
+    @Published var cardToast: String?
+    /// 正在拖小抄：拖动中左上角的位置（松手才保存）
+    @Published var cheatDragPos: CGPoint?
     /// 当前屏幕的标识（位置按屏幕分别记住）
     var screenKey = ""
     var panelSize = CGSize(width: 1100, height: 800)
@@ -78,12 +82,50 @@ struct IslandLayout: Equatable {
     var controls: CGRect?
     /// 卡片在摄像头中线上（显示悬挂细线）
     var centered = false
+    /// 第一次用时卡片旁边的操作提示
+    var tip: CGRect?
+    /// 右上角的小抄
+    var cheat: CGRect?
+    /// 第一次打开小抄时旁边的“可以拖动”提示
+    var cheatTip: CGRect?
 }
 
 enum IslandMetrics {
-    static let peekWidth: CGFloat = 470
+    static let peekWidth: CGFloat = 520
     static let compactSide: CGFloat = 156
-    static let controlsSize = CGSize(width: 176, height: 40)
+    static let controlsSize = CGSize(width: 214, height: 40)
+    static let tipSize = CGSize(width: 278, height: 150)
+    static let cheatWidth: CGFloat = 300
+
+    /// 操作提示放在卡片右边，放不下就放左边
+    static func tipFrame(card: CGRect, panel: CGSize) -> CGRect {
+        let s = tipSize
+        let right = card.maxX + 14
+        let x = right + s.width <= panel.width - 8 ? right : max(8, card.minX - 14 - s.width)
+        return CGRect(x: x, y: card.minY, width: s.width, height: s.height)
+    }
+
+    static let cheatTipSize = CGSize(width: 250, height: 112)
+    /// 小抄拖动时顶部能抓的那一条
+    static let cheatGripHeight: CGFloat = 36
+
+    /// 小抄默认在屏幕右上角；拖过就用记住的位置（收在屏幕里，不压住菜单栏）
+    static func cheatFrame(panel: CGSize, notch: NotchInfo, origin: CGPoint?) -> CGRect {
+        let h = min(480, max(260, panel.height * 0.5))
+        let def = CGPoint(x: panel.width - cheatWidth - 20, y: notch.height + 14)
+        let o = origin ?? def
+        let x = min(max(o.x, 8), panel.width - cheatWidth - 8)
+        let y = min(max(o.y, notch.height + 6), panel.height - h - 8)
+        return CGRect(x: x, y: y, width: cheatWidth, height: h)
+    }
+
+    /// 小抄提示放在小抄左边，放不下就放右边
+    static func cheatTipFrame(cheat: CGRect, panel: CGSize) -> CGRect {
+        let s = cheatTipSize
+        let left = cheat.minX - 14 - s.width
+        let x = left >= 8 ? left : min(cheat.maxX + 14, panel.width - s.width - 8)
+        return CGRect(x: x, y: cheat.minY + 8, width: s.width, height: s.height)
+    }
 
     /// 卡片尺寸，以及正在读的那一行的中心离卡片顶边多远
     static func cardSize(_ s: PrompterSettings) -> (size: CGSize, readOffset: CGFloat) {
@@ -143,9 +185,19 @@ enum IslandMetrics {
             let island = CGSize(width: hasToast ? max(compactW, 500) : compactW, height: notch.height + (hasToast ? 30 : 0))
             let pos = model.dragPos ?? settings.position(for: model.screenKey) ?? defaultPosition(model.geo)
             let card = cardFrame(pos, settings: settings, notch: notch, panel: model.panelSize)
-            return IslandLayout(island: island, card: card,
-                                controls: controlsFrame(card: card, panel: model.panelSize),
-                                centered: abs(card.midX - model.panelSize.width / 2) < 0.5)
+            var l = IslandLayout(island: island, card: card,
+                                 controls: controlsFrame(card: card, panel: model.panelSize),
+                                 centered: abs(card.midX - model.panelSize.width / 2) < 0.5)
+            if settings.showsCardTip && !model.dragging && !model.snapshot { l.tip = tipFrame(card: card, panel: model.panelSize) }
+            if settings.cheatSheet {
+                let c = cheatFrame(panel: model.panelSize, notch: notch,
+                                   origin: model.cheatDragPos ?? settings.cheatPosition(for: model.screenKey))
+                l.cheat = c
+                if !settings.cheatTipDismissed && model.cheatDragPos == nil && !model.snapshot {
+                    l.cheatTip = cheatTipFrame(cheat: c, panel: model.panelSize)
+                }
+            }
+            return l
         }
     }
 
@@ -192,6 +244,11 @@ final class IslandController {
     private var flashWork: DispatchWorkItem?
     private var scrollAccum: CGFloat = 0
     private var scrollMonitor: Any?
+    private var toastWork: DispatchWorkItem?
+    /// 小抄的位置（屏幕坐标）：鼠标在里面滚动时让小抄自己滚，不翻提词卡片
+    private var cheatGlobal: CGRect?
+    /// 现在是不是我们改过光标（离开时要还原成箭头）
+    private var customCursor = false
     private var bag = Set<AnyCancellable>()
 
     init(engine: PrompterEngine, store: ScriptStore, settings: PrompterSettings, actions: IslandActions) {
@@ -242,11 +299,19 @@ final class IslandController {
         return NSScreen.screens.first { $0.safeAreaInsets.top > 0 } ?? NSScreen.screens.first
     }
 
-    /// 回到默认位置（当前屏幕）
+    /// 回到默认位置（当前屏幕）和预设大小（当前样式）
     func resetPosition() {
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.82)) {
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.68)) {
             settings.setPosition(nil, for: model.screenKey)
+            settings.resetSize()
         }
+        settings.didResetCard = true
+        guard engine.phase.isActive else { return }
+        model.cardToast = "已回到默认位置和大小"
+        toastWork?.cancel()
+        let w = DispatchWorkItem { [weak self] in self?.model.cardToast = nil }
+        toastWork = w
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8, execute: w)
     }
 
     func reposition() {
@@ -294,7 +359,10 @@ final class IslandController {
             cardLeaveWork = w
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: w)
         }
-        let interactive = inside || inCard || model.dragging
+        cheatGlobal = layout.cheat.map(global)
+        let inExtras = [layout.tip, layout.cheat, layout.cheatTip].compactMap { $0 }.contains { global($0).contains(p) }
+        let interactive = inside || inCard || inExtras || model.dragging || model.cheatDragPos != nil
+        updateCursor(p, layout: layout, global: global)
         if panel.ignoresMouseEvents == interactive { panel.ignoresMouseEvents = !interactive }
 
         if inside {
@@ -312,8 +380,40 @@ final class IslandController {
         }
     }
 
+    /// 光标：平时箭头；拖动条 / 小抄的六个小点上是张开的手，拖动时握住的手，四个角是斜向箭头。
+    /// 面板不会变成当前窗口，系统的悬停事件进不来，所以和悬停检测一起在定时器里做，每次都重新设一遍
+    private func updateCursor(_ p: CGPoint, layout: IslandLayout, global: (CGRect) -> CGRect) {
+        var cursor: NSCursor?
+        if model.dragPos != nil || model.cheatDragPos != nil {
+            cursor = .closedHand
+        } else if let c = layout.card.map(global), c.insetBy(dx: -14, dy: -14).contains(p) {
+            let corners: [(CGPoint, Bool, Bool)] = [(CGPoint(x: c.minX, y: c.maxY), true, true), (CGPoint(x: c.maxX, y: c.maxY), true, false),
+                                                    (CGPoint(x: c.minX, y: c.minY), false, true), (CGPoint(x: c.maxX, y: c.minY), false, false)]
+            // 和 macOS 窗口标题栏一样：整张卡片都能拖，但平时是箭头；只有顶部那条拖动条上是张开的手
+            let grab = CGRect(x: c.midX - 40, y: c.maxY - 22, width: 80, height: 22)
+            if let k = corners.first(where: { hypot($0.0.x - p.x, $0.0.y - p.y) < 16 }) {
+                cursor = CardCursor.resize(top: k.1, left: k.2)
+            } else if grab.contains(p) {
+                cursor = .openHand
+            }
+            if model.resizing { return }
+        } else if let ch = layout.cheat.map(global) {
+            // 小抄：只有左上角那六个小点上是张开的手
+            let grip = CGRect(x: ch.minX + 6, y: ch.maxY - IslandMetrics.cheatGripHeight, width: 30, height: IslandMetrics.cheatGripHeight)
+            if grip.contains(p) { cursor = .openHand }
+        }
+        if let cursor {
+            cursor.set()
+            customCursor = true
+        } else if customCursor {
+            NSCursor.arrow.set()
+            customCursor = false
+        }
+    }
+
     private func handleScroll(_ e: NSEvent) -> NSEvent? {
         guard e.window === panel, engine.phase.isActive else { return e }
+        if let c = cheatGlobal, c.contains(NSEvent.mouseLocation) { return e }
         let dy = e.hasPreciseScrollingDeltas ? e.scrollingDeltaY : e.scrollingDeltaY * 12
         scrollAccum += dy
         if abs(scrollAccum) > 36 {

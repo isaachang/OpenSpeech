@@ -11,28 +11,60 @@ extension Color {
 }
 
 /// 全 App 的颜色都从这里取，换配色只改这一处。
+/// 纸白配色：主窗口、更新卡片、提词卡片是浅色纸面、黑字；刘海是硬件，永远是黑的，刘海里用最下面“刘海”那一组。
 enum Theme {
-    // 品牌色：黑白。主按钮是白底黑字，选中、进度、跟读高亮都用白色的明暗来区分
-    static let accent = Color(hex: 0xF5F5F7)
-    /// 白色主按钮上的文字和图标
-    static let onAccent = Color.black
-    /// 开关、滑块打开时的颜色（比纯白暗一点，白色的开关圆钮才看得清）
-    static let control = Color(hex: 0xBDBDC2)
-    /// 选中的底色、轻微的光晕
-    static let soft = Color.white.opacity(0.1)
-    static let link = Color.white.opacity(0.88)
-    /// 提词：正在读的字纯白、带一条细下划线，还没读到的字灰一些，读过的更灰（LineStyler）
-    static let current = Color.white
-    static let upcoming = Color.white.opacity(0.58)
+    // 纸面
+    static let paper = Color(hex: 0xFBFAF7)          // 主窗口
+    static let paperSide = Color(hex: 0xF3F1EC)      // 侧栏
+    static let sheet = Color.white                   // 编辑区、弹出卡片
+    static let thumb = Color(hex: 0xE9E6DF)          // 样式缩略图的底
+    static let selRow = Color(hex: 0xE6E2D9)         // 选中的稿件
+    static let line = Color.black.opacity(0.08)      // 细描边、分割线
+    static let wash = Color.black.opacity(0.04)      // 浅色块（说明框、未选中的底）
 
-    // 状态色：表示意思，不跟着配色变
-    static let amber = Color(hex: 0xFCD34D)      // 字幕胶囊样式
-    static let cue = Color(hex: 0xFDBA74)        // 【导演提示】
-    static let emphasis = Color(hex: 0xFDE68A)   // **重点**
-    static let green = Color(hex: 0x4ADE80)      // 语速正好、完成
-    static let sky = Color(hex: 0x7DD3FC)        // 语速偏慢
-    static let orange = Color(hex: 0xFB923C)     // 语速偏快、提醒
-    static let red = Color(hex: 0xF87171)        // 出错
+    // 文字
+    static let ink = Color(hex: 0x1C1C1E)
+    static let ink2 = Color(hex: 0x5E5E63)
+    static let ink3 = Color(hex: 0x9A9A9F)
+    static let link = ink
+
+    // 按钮和控件：每屏只有一个黑色实心主按钮，其余是浅灰
+    static let primaryFill = ink
+    static let primaryText = Color.white
+    static let buttonFill = Color(hex: 0xEEEBE5)
+    static let buttonText = ink
+    static let control = ink                         // 开关、滑块打开时
+    static let selection = ink                       // 选中的样式缩略图描边
+
+    // 提词卡片：正在读的字用荧光笔黄标出来
+    static let highlighter = Color(hex: 0xFFE58A)
+    /// 液态玻璃：毛玻璃层的不透明度（越小越能看清后面）和上面那层纸色的不透明度。
+    /// 0.7 + 0.5：后面的东西隐约透出来，深色背景上黑字也看得清
+    static let glassFrost: CGFloat = 0.7
+    static let glassVeil = 0.5
+    /// 小抄是一整屏小字，后面太花会看不清：比提词卡片实一些
+    static let cheatVeil = 0.8
+
+    // 刘海（黑色背景）
+    static let accent = Color(hex: 0xF5F5F7)         // 刘海里的声波、勾、进度
+    static let notchPrimaryFill = Color.white
+    static let notchPrimaryText = Color.black
+    static let soft = Color.white.opacity(0.1)
+
+    // 状态色：表示意思，不跟着配色变。深色底（刘海、字幕胶囊）用这组
+    static let amber = Color(hex: 0xFCD34D)          // 字幕胶囊样式
+    static let cue = Color(hex: 0xFDBA74)            // 【导演提示】
+    static let emphasis = Color(hex: 0xFDE68A)       // **重点**
+    static let green = Color(hex: 0x4ADE80)          // 语速正好、完成
+    static let sky = Color(hex: 0x7DD3FC)            // 语速偏慢
+    static let orange = Color(hex: 0xFB923C)         // 语速偏快、提醒
+    static let red = Color(hex: 0xF87171)            // 出错
+    // 浅色纸面上的同一组状态色（加深，才看得清）
+    static let cueInk = Color(hex: 0xC2410C)
+    static let emphasisInk = Color(hex: 0xB7791F)
+    static let greenInk = Color(hex: 0x16A34A)
+    static let amberInk = Color(hex: 0xB45309)
+    static let redInk = Color(hex: 0xDC2626)
 }
 
 enum Fmt {
@@ -82,6 +114,8 @@ struct IslandButton: View {
     let icon: String
     var label: String? = nil
     var prominent = false
+    /// 刘海里是黑底；放在浅色主窗口里时传 false
+    var onDark = true
     let action: () -> Void
 
     var body: some View {
@@ -90,11 +124,12 @@ struct IslandButton: View {
                 Image(systemName: icon).font(.system(size: 11, weight: .bold))
                 if let label { Text(label).font(.system(size: 12, weight: .semibold)) }
             }
-            .foregroundColor(prominent ? Theme.onAccent : .white.opacity(0.9))
+            .foregroundColor(prominent ? (onDark ? Theme.notchPrimaryText : Theme.primaryText) : (onDark ? .white.opacity(0.9) : Theme.ink))
             .padding(.horizontal, label == nil ? 9 : 13)
             .frame(minWidth: 28)
             .frame(height: 26)
-            .background(Capsule().fill(prominent ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(Color.white.opacity(0.11))))
+            .background(Capsule().fill(prominent ? (onDark ? Theme.notchPrimaryFill : Theme.primaryFill)
+                                                 : (onDark ? Color.white.opacity(0.11) : Theme.buttonFill)))
             .contentShape(Capsule())
         }
         .buttonStyle(PressStyle())
@@ -118,6 +153,7 @@ struct AppGlyph: View {
             }
         }
         .frame(width: size, height: size)
+        .overlay(RoundedRectangle(cornerRadius: size * 0.225, style: .continuous).strokeBorder(Color.black.opacity(0.08), lineWidth: 0.5))
     }
 }
 

@@ -101,7 +101,7 @@ enum ScriptLanguageModel {
         return Array(out.filter { seen.insert($0.lowercased()).inserted }.prefix(100))
     }
 
-    /// 英文术语：中文稿里的英文词组（“Claude Code”“GitHub”）；英文稿里大写开头的专有名词（“Isaac”“Capstone”）
+    /// 英文术语：中文稿里的英文词组（“Claude Code”“GitHub”）；英文稿里大写开头的专有名词（“Alex”“Capstone”）
     static func latinTerms(_ text: String) -> [String] {
         let zh = text.contains { ScriptChar.isCJK($0) }
         var terms = Set<String>()

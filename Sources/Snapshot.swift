@@ -82,12 +82,12 @@ enum UpdateSnapshot {
     static func run(dir: String) {
         try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
         let sample = Changelog.parse("""
-        ## [0.3.1] - 2026-10-20
+        ## [0.4.0] - 2026-11-01
 
-        > 英文跟读更准，修复 3 个问题。
+        > 示例更新：修复了几个小问题。
 
         ### 新增 Added
-        - 英文稿按词跟读，换行更自然。
+        - 小抄可以调大小。
         ### 修复 Fixed
         - 外接屏上卡片位置偏移。
         - 暂停后偶尔要说两遍才继续。
@@ -106,8 +106,8 @@ enum UpdateSnapshot {
             let r = ImageRenderer(content: view
                 .padding(20)
                 .frame(width: width, height: height, alignment: .top)
-                .background(Color(hex: 0x16161C))
-                .environment(\.colorScheme, .dark))
+                .background(Theme.paper)
+                .environment(\.colorScheme, .light))
             r.scale = 2
             guard let img = r.nsImage, let tiff = img.tiffRepresentation,
                   let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) else { return }
@@ -126,5 +126,73 @@ enum UpdateSnapshot {
         save("9-footer", width: 320, VStack(spacing: 14) {
             ForEach(Array(footers.enumerated()), id: \.offset) { _, st in UpdateFooter(model: model(st)) }
         })
+    }
+}
+
+/// `OpenSpeech --snapshot-readme <dir>`：README 用的干净截图（统一的桌面壁纸，不带屏幕上别的内容）
+enum ReadmeSnapshot {
+    @MainActor
+    static func run(dir: String) {
+        try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
+        let suite = "app.openspeech.readme"
+        let defaults = UserDefaults(suiteName: suite)!
+        defaults.removePersistentDomain(forName: suite)
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = ScriptStore(inMemory: true)
+        let interview = Script(title: "产品经理面试", body: SampleScripts.interview)
+        let pitch = store.scripts[0]
+        let notch = NotchInfo(width: 220, height: 38, hasNotch: true)
+        let geo = ScreenGeo(mmPerPt: 0.168, cameraY: 19)
+
+        /// 找稿子里某个字第一次出现的位置
+        func unit(_ script: Script, _ text: String) -> Double {
+            let p = ParsedScript.parse(script.body)
+            let chars = Array(text)
+            for i in p.units.indices where i + chars.count <= p.units.count {
+                if zip(chars, p.units[i..<(i + chars.count)]).allSatisfy({ String($0.0) == $0.1.text }) { return Double(i) }
+            }
+            return 0
+        }
+
+        func render(_ name: String, w: CGFloat, h: CGFloat, script: Script, cursor: Double, phase: IslandPhase = .presenting,
+                    style: DisplayStyle = .glass, cheat: Bool = false, hovering: Bool = false, cardHovering: Bool = false) {
+            let settings = PrompterSettings(defaults: defaults)
+            settings.displayStyle = style
+            settings.cheatSheet = cheat
+            settings.tipsDismissed = true
+            settings.cheatTipDismissed = true
+            let engine = PrompterEngine(settings: settings)
+            engine.audioDisabled = true
+            engine.debugPresent(script: script, cursor: cursor, phase: phase, mode: .voice)
+            let model = IslandModel()
+            model.notch = notch
+            model.geo = geo
+            model.panelSize = CGSize(width: w, height: h)
+            model.snapshot = true
+            model.hovering = hovering
+            model.cardHovering = cardHovering
+            let s = ScriptStore(inMemory: true)
+            if phase == .idle { s.selectedID = s.scripts.first?.id }
+            let actions = IslandActions(start: {}, openLibrary: {}, importURLs: { _ in }, cycleScript: { _ in }, resetPosition: {})
+            let view = ZStack(alignment: .top) {
+                LinearGradient(colors: [Color(hex: 0x3C3F8F), Color(hex: 0x6A4E8E), Color(hex: 0xB9787E), Color(hex: 0xD99A7C)],
+                               startPoint: .topLeading, endPoint: .bottomTrailing)
+                Rectangle().fill(Color.black.opacity(0.18)).frame(height: notch.height)
+                IslandRootView(model: model, engine: engine, store: s, settings: settings, actions: actions, acceptsDrop: false)
+            }
+            .frame(width: w, height: h)
+            let r = ImageRenderer(content: view)
+            r.scale = 2
+            if let img = r.nsImage, let tiff = img.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff),
+               let png = rep.representation(using: .png, properties: [:]) {
+                try? png.write(to: URL(fileURLWithPath: dir).appendingPathComponent("\(name).png"))
+            }
+        }
+
+        render("hero", w: 1280, h: 640, script: interview, cursor: unit(interview, "顾虑"), cheat: true)
+        render("card", w: 900, h: 400, script: pitch, cursor: unit(pitch, "提词"), cardHovering: true)
+        render("heading", w: 900, h: 340, script: interview, cursor: unit(interview, "大二"))
+        render("caption", w: 900, h: 300, script: pitch, cursor: unit(pitch, "提词"), style: .caption)
+        render("peek", w: 900, h: 260, script: pitch, cursor: 0, phase: .idle, hovering: true)
     }
 }

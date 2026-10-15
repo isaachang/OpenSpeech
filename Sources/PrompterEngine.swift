@@ -14,6 +14,8 @@ enum IslandPhase: Equatable {
         default: return false
         }
     }
+
+    var isCountdown: Bool { if case .countdown = self { return true }; return false }
 }
 
 struct SessionSummary {
@@ -224,6 +226,20 @@ final class PrompterEngine: ObservableObject {
         var li = max(0, min(lines.count - 1, currentLine + delta))
         while lines[li].unitRange.isEmpty, (0..<lines.count).contains(li + step) { li += step }
         setPosition(Double(lines[li].unitRange.lowerBound))
+    }
+
+    /// 小抄里点一段：跳到这一段开头，语音跟随从这里接着走
+    func jump(toUnit u: Int) {
+        guard phase.isActive, !parsed.units.isEmpty else { return }
+        setPosition(Double(max(0, min(u, parsed.units.count - 1))))
+    }
+
+    /// ⌥⌘1…9 / 小抄里点标题：跳到第 n 段（从 0 开始）的第一个字
+    func jump(toSection n: Int) {
+        let secs = parsed.sections
+        guard phase.isActive, secs.indices.contains(n) else { return }
+        jump(toUnit: secs[n].nextUnit)
+        showToast("→ \(n + 1)  \(secs[n].title)", duration: 1.6)
     }
 
     func adjustSpeed(_ d: Double) {

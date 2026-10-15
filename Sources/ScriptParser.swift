@@ -23,7 +23,18 @@ struct SpeechUnit: Equatable {
     }
 }
 
-enum GlyphStyle { case normal, emphasis, cue }
+enum GlyphStyle { case normal, emphasis, cue, heading }
+
+/// 稿子里的 # / ## / ### 标题：只是给自己看的路牌，不用念，跟读时直接跨过去
+struct ScriptHeading: Equatable {
+    /// 1 = #，2 = ##，3 = ###
+    let level: Int
+    let title: String
+    /// 标题文字在 glyphs 里的位置
+    let glyphs: Range<Int>
+    /// 标题后面第一个要念的字（跳转到这一段时停在这里）
+    let nextUnit: Int
+}
 
 /// 屏幕上显示的每个字符
 struct Glyph {
@@ -49,6 +60,17 @@ struct ParsedScript {
     var spokenEnd: Int { (units.lastIndex { !$0.optional } ?? -1) + 1 }
 
     var isMostlyLatin: Bool { wordCount > cjkCount }
+
+    var headings: [ScriptHeading] = []
+
+    /// 用来分段、编号、⌥⌘1…9 跳转的那一级标题：有 ## 就用 ##，没有就用 #
+    var sectionLevel: Int? { headings.contains { $0.level == 2 } ? 2 : headings.map(\.level).min() }
+    var sections: [ScriptHeading] { headings.filter { $0.level == sectionLevel } }
+
+    /// 某个字落在第几段（从 0 开始；在第一个标题之前是 nil）
+    func section(at unit: Int) -> Int? {
+        sections.lastIndex { $0.nextUnit <= unit }
+    }
     var localeID: String { isMostlyLatin ? "en-US" : "zh-CN" }
 
     /// markup: 解析【导演提示】/[cue] 与 **重音**；keys: 是否计算拼音 key（只统计字数时可关掉）；
@@ -81,6 +103,30 @@ struct ParsedScript {
         var i = 0
         while i < chars.count {
             let c = chars[i]
+            // 行首的 # / ## / ###（后面跟空格）：整行是标题，显示但不用念
+            if markup && c == "#" && (i == 0 || chars[i - 1].isNewline) {
+                var level = 0
+                while i + level < chars.count, chars[i + level] == "#" { level += 1 }
+                if level <= 6, i + level < chars.count, chars[i + level] == " " || chars[i + level] == "\u{3000}" {
+                    flush()
+                    var j = i + level
+                    while j < chars.count, chars[j] == " " || chars[j] == "\u{3000}" { j += 1 }
+                    let g0 = p.glyphs.count
+                    var title = ""
+                    while j < chars.count, !chars[j].isNewline {
+                        p.glyphs.append(Glyph(char: chars[j], isUnit: false, unit: p.units.count - 1, style: .heading))
+                        title.append(chars[j])
+                        j += 1
+                    }
+                    if !p.units.isEmpty { p.breakAfter[p.units.count - 1] = true }
+                    let t = title.trimmingCharacters(in: .whitespaces)
+                    if !t.isEmpty {
+                        p.headings.append(ScriptHeading(level: level, title: t, glyphs: g0..<p.glyphs.count, nextUnit: p.units.count))
+                    }
+                    i = j
+                    continue
+                }
+            }
             if c.isNewline {
                 // 没闭合的标记不跨段落
                 inCue = false

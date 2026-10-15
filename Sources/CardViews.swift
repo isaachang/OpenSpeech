@@ -3,7 +3,8 @@ import SwiftUI
 
 enum GlassCard {
     static let hPad: CGFloat = 30
-    static let top: CGFloat = 16
+    /// 顶部留出放 Logo 和名字的位置
+    static let top: CGFloat = 26
     static let bottom: CGFloat = 20
 }
 
@@ -17,7 +18,7 @@ enum CaptionCard {
 
 // MARK: - 提词卡片
 
-/// 提词卡片（玻璃卡片 / 字幕胶囊）：拖中间移动（靠近镜头中线自动吸附），拖四个角调大小，双击回到默认位置。
+/// 提词卡片（玻璃卡片 / 字幕胶囊）：拖中间移动（靠近镜头中线自动吸附），拖四个角调大小，双击回到默认位置和预设大小。
 struct PrompterCard: View {
     @ObservedObject var engine: PrompterEngine
     @ObservedObject var settings: PrompterSettings
@@ -26,6 +27,8 @@ struct PrompterCard: View {
     let reset: () -> Void
     @State private var dragStart: CardPosition?
     @State private var resizeStart: (chars: Int, lines: Int)?
+    /// 上一次是不是吸在镜头中线上（刚吸上时触控板轻震一下）
+    @State private var snapped = false
 
     private var glass: Bool { settings.displayStyle == .glass }
     private var showChrome: Bool { model.cardHovering || model.dragging }
@@ -43,15 +46,18 @@ struct PrompterCard: View {
                     progress.padding(.horizontal, 22).padding(.bottom, 9)
                 }
             }
+            if glass && !showChrome && !engine.phase.isCountdown {
+                CardBrand().padding(.top, 8).transition(.opacity)
+            }
             if showChrome {
-                Capsule().fill(Color.white.opacity(dragStart != nil ? 0.55 : 0.28))
+                Capsule().fill((glass ? Theme.ink : .white).opacity(dragStart != nil ? 0.55 : 0.28))
                     .frame(width: 38, height: 4)
-                    .padding(.top, glass ? 6 : 4)
+                    .padding(.top, glass ? 9 : 4)
                     .transition(.opacity)
             }
         }
         .frame(width: frame.width, height: frame.height)
-        .shadow(color: .black.opacity(0.42), radius: 28, x: 0, y: 14)
+        .shadow(color: .black.opacity(glass ? 0.22 : 0.42), radius: 28, x: 0, y: 14)
         .contentShape(shape)
         .onTapGesture(count: 2, perform: reset)
         .gesture(moveGesture)
@@ -64,23 +70,29 @@ struct PrompterCard: View {
                 badge.fixedSize().offset(x: badgeOnLeft ? -frame.width - 14 : frame.width + 14).transition(.opacity)
             }
         }
-        .help("拖动移动 · 拖四个角调大小 · 双击回到默认位置")
+        .help("拖动移动 · 拖四个角调大小 · 双击回到默认位置和大小")
         .animation(.easeOut(duration: 0.18), value: showChrome)
     }
 
     @ViewBuilder private func background(_ shape: RoundedRectangle) -> some View {
         Group {
             if model.snapshot {
-                Color(hex: 0x101018).opacity(glass ? 0.94 : 0.97)
+                // 离屏渲染画不出系统毛玻璃，用同样透明度的纸色近似
+                glass ? Theme.paper.opacity(Theme.glassVeil + 0.08) : Color(hex: 0x101018).opacity(0.97)
             } else if glass {
-                VisualEffectBlur().overlay(Color.black.opacity(0.45))
+                // 液态玻璃：浅色毛玻璃 + 一层半透明纸色，能透出后面，字依然清楚
+                VisualEffectBlur(dark: false, opacity: Theme.glassFrost).overlay(Theme.paper.opacity(Theme.glassVeil))
             } else {
                 Color.black.opacity(0.86)
             }
         }
         .clipShape(shape)
-        shape.strokeBorder(LinearGradient(colors: [.white.opacity(glass ? 0.18 : 0.12), .white.opacity(0.04)],
-                                          startPoint: .top, endPoint: .bottom), lineWidth: 1)
+        if glass {
+            GlassSheen(shape: shape)
+        } else {
+            shape.strokeBorder(LinearGradient(colors: [.white.opacity(0.12), .white.opacity(0.04)],
+                                              startPoint: .top, endPoint: .bottom), lineWidth: 1)
+        }
     }
 
     @ViewBuilder private var content: some View {
@@ -91,7 +103,7 @@ struct PrompterCard: View {
                 if glass {
                     VStack(spacing: 4) {
                         Text("\(n)").font(.system(size: 46, weight: .heavy, design: .rounded))
-                        Text(hint).font(.system(size: 12, weight: .medium)).foregroundColor(.white.opacity(0.6))
+                        Text(hint).font(.system(size: 12, weight: .medium)).foregroundColor(Theme.ink2)
                     }
                     .padding(.bottom, 8)
                 } else {
@@ -101,7 +113,7 @@ struct PrompterCard: View {
                     }
                 }
             }
-            .foregroundStyle(glass ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(Theme.amber))
+            .foregroundStyle(glass ? Theme.ink : Theme.amber)
             .contentTransition(.numericText(countsDown: true))
             .animation(.spring(response: 0.35, dampingFraction: 0.7), value: n)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -117,8 +129,8 @@ struct PrompterCard: View {
     private var progress: some View {
         GeometryReader { g in
             ZStack(alignment: .leading) {
-                Capsule().fill(Color.white.opacity(0.08))
-                Capsule().fill(Theme.accent).frame(width: max(3, g.size.width * engine.progress))
+                Capsule().fill(Color.black.opacity(0.08))
+                Capsule().fill(Theme.ink).frame(width: max(3, g.size.width * engine.progress))
             }
         }
         .frame(height: 2.5)
@@ -163,6 +175,7 @@ struct PrompterCard: View {
             .onChanged { v in
                 if dragStart == nil {
                     dragStart = IslandMetrics.clamp(currentPos, settings: settings, notch: model.notch, panel: model.panelSize)
+                    snapped = dragStart?.dx == 0
                 }
                 guard let s = dragStart else { return }
                 var p = CardPosition(dx: s.dx + v.translation.width, readY: s.readY + v.translation.height)
@@ -171,11 +184,16 @@ struct PrompterCard: View {
                 let home = IslandMetrics.defaultPosition(model.geo).readY
                 if p.dx == 0 && abs(p.readY - home) < 10 { p.readY = home }
                 model.dragPos = IslandMetrics.clamp(p, settings: settings, notch: model.notch, panel: model.panelSize)
+                // 刚吸到镜头中线上时，触控板轻轻震一下（系统的“对齐”触感）
+                let onCenter = model.dragPos?.dx == 0
+                if onCenter && !snapped { NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now) }
+                snapped = onCenter
             }
             .onEnded { _ in
                 if let p = model.dragPos {
                     let home = IslandMetrics.defaultPosition(model.geo)
                     settings.setPosition(p == home ? nil : p, for: model.screenKey)
+                    settings.didMoveCard = true
                 }
                 model.dragPos = nil
                 dragStart = nil
@@ -227,7 +245,48 @@ struct PrompterCard: View {
             .onEnded { _ in
                 resizeStart = nil
                 model.resizing = false
+                settings.didResizeCard = true
             }
+    }
+
+}
+
+enum CardCursor {
+    /// 放到四个角上：斜向的调大小箭头
+    static func resize(top: Bool, left: Bool) -> NSCursor {
+        if #available(macOS 15.0, *) {
+            let pos: NSCursor.FrameResizePosition = top ? (left ? .topLeft : .topRight) : (left ? .bottomLeft : .bottomRight)
+            return NSCursor.frameResize(position: pos, directions: .all)
+        }
+        return .crosshair
+    }
+}
+
+/// 液态玻璃的边：顶部一道亮光、往下渐弱，外面一圈很淡的深色细线让卡片在浅色背景上也有轮廓
+struct GlassSheen<S: InsettableShape>: View {
+    let shape: S
+
+    var body: some View {
+        ZStack {
+            // 上半部分一层很淡的高光，像玻璃表面反光
+            shape.fill(LinearGradient(colors: [.white.opacity(0.32), .white.opacity(0)], startPoint: .top, endPoint: .center))
+                .allowsHitTesting(false)
+            shape.strokeBorder(LinearGradient(colors: [.white.opacity(0.95), .white.opacity(0.35), .white.opacity(0.6)],
+                                              startPoint: .top, endPoint: .bottom), lineWidth: 1.2)
+            shape.inset(by: -0.5).strokeBorder(Color.black.opacity(0.1), lineWidth: 0.5)
+        }
+    }
+}
+
+/// 提词卡片顶部正中的小 Logo 和名字，淡淡的，不抢稿子的注意力
+struct CardBrand: View {
+    var body: some View {
+        HStack(spacing: 4) {
+            AppGlyph(size: 11)
+            Text("OpenSpeech").font(.system(size: 10, weight: .semibold, design: .rounded))
+                .foregroundColor(Theme.ink.opacity(0.42))
+        }
+        .fixedSize()
     }
 }
 
@@ -236,19 +295,33 @@ struct PrompterCard: View {
 struct CardControls: View {
     @ObservedObject var engine: PrompterEngine
     let glass: Bool
+    var cheatOn = false
+    /// 离屏渲染画不出系统毛玻璃，用纸色代替
+    var snapshot = false
+    var toggleCheat: () -> Void = {}
 
     var body: some View {
         HStack(spacing: 8) {
-            RoundIcon(icon: "chevron.up") { engine.jumpLines(-1) }
+            RoundIcon(icon: "chevron.up", glass: glass) { engine.jumpLines(-1) }
             RoundIcon(icon: engine.isPaused ? "play.fill" : "pause.fill", prominent: true, glass: glass) { engine.togglePause() }
-            RoundIcon(icon: "chevron.down") { engine.jumpLines(1) }
-            RoundIcon(icon: "xmark") { engine.stop() }
+            RoundIcon(icon: "chevron.down", glass: glass) { engine.jumpLines(1) }
+            RoundIcon(icon: cheatOn ? "doc.text.fill" : "doc.text", glass: glass) { toggleCheat() }
+                .help("小抄：在屏幕右上角显示整篇稿子（⌥⌘O）")
+            RoundIcon(icon: "xmark", glass: glass) { engine.stop() }
         }
         .padding(.horizontal, 8)
         .frame(height: IslandMetrics.controlsSize.height)
-        .background(Capsule().fill(Color.black.opacity(0.82)))
-        .overlay(Capsule().strokeBorder(Color.white.opacity(0.1)))
-        .shadow(color: .black.opacity(0.35), radius: 12, y: 6)
+        .background {
+            if glass && snapshot {
+                Capsule().fill(Theme.paper.opacity(0.9))
+            } else if glass {
+                VisualEffectBlur(dark: false, opacity: Theme.glassFrost).overlay(Theme.paper.opacity(Theme.glassVeil)).clipShape(Capsule())
+            } else {
+                Capsule().fill(Color.black.opacity(0.82))
+            }
+        }
+        .overlay { if glass { GlassSheen(shape: Capsule()) } else { Capsule().strokeBorder(Color.white.opacity(0.1)) } }
+        .shadow(color: .black.opacity(glass ? 0.18 : 0.35), radius: 12, y: 6)
     }
 }
 
@@ -262,11 +335,11 @@ private struct RoundIcon: View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(.system(size: 11, weight: .bold))
-                .foregroundColor(prominent ? Theme.onAccent : .white.opacity(0.9))
+                .foregroundColor(prominent ? (glass ? Theme.primaryText : .black) : (glass ? Theme.ink : .white.opacity(0.9)))
                 .frame(width: 30, height: 30)
                 .background(Circle().fill(prominent
-                    ? (glass ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(Theme.amber))
-                    : AnyShapeStyle(Color.white.opacity(0.12))))
+                    ? (glass ? Theme.primaryFill : Theme.amber)
+                    : (glass ? Color.black.opacity(0.06) : Color.white.opacity(0.12))))
                 .contentShape(Circle())
         }
         .buttonStyle(PressStyle())
@@ -275,9 +348,11 @@ private struct RoundIcon: View {
 
 struct CardHint: View {
     let text: String
+    var icon: String? = nil
 
     var body: some View {
-        Text(text)
+        Label { Text(text) } icon: { if let icon { Image(systemName: icon).foregroundColor(Theme.green) } }
+            .labelStyle(.titleAndIcon)
             .font(.system(size: 11.5, weight: .medium))
             .foregroundColor(.white.opacity(0.85))
             .padding(.horizontal, 12)
@@ -292,28 +367,49 @@ struct CardHint: View {
 
 /// 一行稿子按“已读 / 正在读 / 没读 / 重点 / 导演提示”上色
 struct LineStyler {
-    let engine: PrompterEngine
-    let current: Color
-    var upcoming: Color = .white
-    /// 正在读的字下面画一条线（黑白配色里只靠颜色分不清正在读和还没读）
-    var underlineCurrent = false
-    /// 字幕胶囊里“正在读”已经是黄色，重点改用加粗
-    var boldEmphasis = false
+    struct Colors {
+        var read: Color
+        var current: Color
+        var upcoming: Color
+        var emphasis: Color
+        var cue: Color
+        var cueRead: Color
+        /// 正在读的字底下的荧光笔色
+        var currentBackground: Color? = nil
+        /// 字幕胶囊里“正在读”已经是黄色，重点改用加粗
+        var boldEmphasis = false
+        /// # 标题（不用念）
+        var heading: Color = .gray
 
-    private enum Role { case read, current, upcoming, emphasis, cue, cueRead }
+        /// 纸白提词卡片：黑字，正在读的字用荧光笔黄标出来
+        static let paper = Colors(read: Theme.ink.opacity(0.28), current: .black, upcoming: Theme.ink,
+                                  emphasis: Theme.emphasisInk, cue: Theme.cueInk, cueRead: Theme.cueInk.opacity(0.35),
+                                  currentBackground: Theme.highlighter, heading: Theme.ink.opacity(0.45))
+        /// 字幕胶囊（黑底）：正在读是黄色
+        static let caption = Colors(read: .white.opacity(0.32), current: Theme.amber, upcoming: .white,
+                                    emphasis: .white, cue: Theme.cue.opacity(0.95), cueRead: Theme.cue.opacity(0.35),
+                                    boldEmphasis: true, heading: .white.opacity(0.45))
+    }
+
+    let engine: PrompterEngine
+    let colors: Colors
+
+    private enum Role { case read, current, upcoming, emphasis, cue, cueRead, heading }
 
     private func color(_ r: Role) -> Color {
         switch r {
-        case .read: return .white.opacity(0.32)
-        case .current: return current
-        case .upcoming: return upcoming
-        case .emphasis: return boldEmphasis ? .white : Theme.emphasis
-        case .cue: return Theme.cue.opacity(0.95)
-        case .cueRead: return Theme.cue.opacity(0.35)
+        case .heading: return colors.heading
+        case .read: return colors.read
+        case .current: return colors.current
+        case .upcoming: return colors.upcoming
+        case .emphasis: return colors.emphasis
+        case .cue: return colors.cue
+        case .cueRead: return colors.cueRead
         }
     }
 
     private func role(_ g: Glyph, cursor: Int) -> Role {
+        if g.style == .heading { return .heading }
         let read = g.unit >= 0 && g.unit < cursor
         if g.style == .cue { return read ? .cueRead : .cue }
         if read { return .read }
@@ -322,15 +418,16 @@ struct LineStyler {
     }
 
     func text(_ line: PrompterLine, cursor: Int) -> Text {
-        var result = Text(verbatim: "")
+        var out = AttributedString()
         var buf = ""
         var runRole: Role?
         func flush() {
             guard let rr = runRole, !buf.isEmpty else { return }
-            var t = Text(verbatim: buf).foregroundColor(color(rr))
-            if rr == .emphasis && boldEmphasis { t = t.bold() }
-            if rr == .current && underlineCurrent { t = t.underline(true, color: current.opacity(0.75)) }
-            result = result + t
+            var a = AttributedString(buf)
+            a.foregroundColor = color(rr)
+            if rr == .current, let bg = colors.currentBackground { a.backgroundColor = bg }
+            if rr == .emphasis && colors.boldEmphasis { a.inlinePresentationIntent = .stronglyEmphasized }
+            out += a
         }
         let glyphs = engine.parsed.glyphs
         for gi in line.glyphs {
@@ -345,7 +442,7 @@ struct LineStyler {
             buf.append(g.char)
         }
         flush()
-        return result
+        return Text(out)
     }
 }
 
@@ -365,17 +462,23 @@ struct PrompterTextView: View {
         let hi = min(engine.lines.count, base + visibleLines + 3)
         let cursorInt = Int(engine.cursor)
         let font = Font(PrompterLayout.font(fontSize) as CTFont)
-        let styler = LineStyler(engine: engine, current: Theme.current, upcoming: Theme.upcoming, underlineCurrent: true)
+        let styler = LineStyler(engine: engine, colors: .paper)
 
         ZStack(alignment: .topLeading) {
             ForEach(lo..<max(lo, hi), id: \.self) { li in
-                styler.text(engine.lines[li], cursor: cursorInt)
-                    .font(font)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                    .frame(width: textWidth, height: lh, alignment: .center)
-                    .offset(y: CGFloat(li) * lh)
-                    .opacity(opacity(Double(li) - scroll))
+                Group {
+                    if let h = HeadingSignpost.heading(for: engine.lines[li], in: engine.parsed) {
+                        HeadingSignpost(heading: h.heading, number: h.number, fontSize: fontSize)
+                    } else {
+                        styler.text(engine.lines[li], cursor: cursorInt)
+                            .font(font)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+                }
+                .frame(width: textWidth, height: lh, alignment: .center)
+                .offset(y: CGFloat(li) * lh)
+                .opacity(opacity(Double(li) - scroll))
             }
         }
         .frame(width: textWidth, alignment: .topLeading)
@@ -385,8 +488,8 @@ struct PrompterTextView: View {
         .mask(fadeMask)
         .background(alignment: .topLeading) {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color.white.opacity(0.07))
-                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Color.white.opacity(0.05)))
+                .fill(Color.black.opacity(0.045))
+                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Color.black.opacity(0.04)))
                 .frame(width: textWidth + 24, height: lh * 1.04)
                 .offset(x: -12, y: CGFloat(anchor) * lh - lh * 0.02)
         }
@@ -421,6 +524,41 @@ struct PrompterTextView: View {
     }
 }
 
+/// 稿子里的标题在提词卡片上的样子：小一号、灰色，两边一条细线，像路牌。不用念，跟读时直接跨过去
+struct HeadingSignpost: View {
+    let heading: ScriptHeading
+    /// 第几段（只有分段那一级标题才有编号）
+    let number: Int?
+    let fontSize: Double
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Rectangle().fill(Color.black.opacity(0.12)).frame(height: 1)
+            HStack(spacing: 6) {
+                if let number {
+                    Text("\(number)").font(.system(size: max(10, fontSize * 0.46), weight: .bold, design: .rounded))
+                        .foregroundColor(Theme.ink2)
+                        .frame(minWidth: fontSize * 0.78, minHeight: fontSize * 0.78)
+                        .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Color.black.opacity(0.08)))
+                }
+                Text(heading.title).font(.system(size: max(11, fontSize * 0.58), weight: .semibold))
+                    .foregroundColor(Theme.ink.opacity(0.5))
+                    .lineLimit(1)
+            }
+            .layoutPriority(1)
+            Rectangle().fill(Color.black.opacity(0.12)).frame(height: 1)
+        }
+    }
+
+    /// 这一行是不是标题；是的话返回标题和编号
+    static func heading(for line: PrompterLine, in p: ParsedScript) -> (heading: ScriptHeading, number: Int?)? {
+        guard let g = line.glyphs.first(where: { !p.glyphs[$0].char.isWhitespace }), p.glyphs[g].style == .heading,
+              let h = p.headings.first(where: { $0.glyphs.contains(g) }) else { return nil }
+        let n = h.level == p.sectionLevel ? p.sections.firstIndex(of: h).map { $0 + 1 } : nil
+        return (h, n)
+    }
+}
+
 /// 字幕胶囊：只显示这一句（大）和下一句（小、暗）；换行时下一句放大顶上来
 struct CaptionTextView: View {
     @ObservedObject var engine: PrompterEngine
@@ -436,7 +574,7 @@ struct CaptionTextView: View {
         let hi = min(engine.lines.count, base + 3)
         let cursorInt = Int(engine.cursor)
         let font = Font(PrompterLayout.font(fontSize) as CTFont)
-        let styler = LineStyler(engine: engine, current: Theme.amber, boldEmphasis: true)
+        let styler = LineStyler(engine: engine, colors: .caption)
 
         ZStack(alignment: .top) {
             ForEach(lo..<max(lo, hi), id: \.self) { li in
@@ -486,12 +624,17 @@ struct HangingThread: View {
 }
 
 struct VisualEffectBlur: NSViewRepresentable {
+    var dark = true
+    /// 毛玻璃本身的不透明度：小于 1 时后面的东西会隐约透出来（液态玻璃的通透感）
+    var opacity: CGFloat = 1
+
     func makeNSView(context: Context) -> NSVisualEffectView {
         let v = NSVisualEffectView()
-        v.material = .hudWindow
+        v.material = dark ? .hudWindow : .popover
         v.blendingMode = .behindWindow
         v.state = .active
-        v.appearance = NSAppearance(named: .darkAqua)
+        v.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+        v.alphaValue = opacity
         return v
     }
 

@@ -24,17 +24,18 @@ struct LibraryView: View {
             EditorPane(store: store, settings: settings, updates: updates, actions: actions)
             SettingsPane(settings: settings, updates: updates, actions: actions).frame(width: 270)
         }
-        .background(Color(hex: 0x16161C).ignoresSafeArea())
+        .background(Theme.paper.ignoresSafeArea())
+        .foregroundColor(Theme.ink)
         .overlay { UpdateOverlay(model: updates) }
         .overlay {
             if dropTargeted {
                 RoundedRectangle(cornerRadius: 18)
                     .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [8, 6]))
-                    .foregroundStyle(Theme.accent)
-                    .background(RoundedRectangle(cornerRadius: 18).fill(Color.black.opacity(0.55)))
+                    .foregroundStyle(Theme.ink)
+                    .background(RoundedRectangle(cornerRadius: 18).fill(Theme.paper.opacity(0.92)))
                     .overlay(
                         VStack(spacing: 10) {
-                            Image(systemName: "arrow.down.doc.fill").font(.system(size: 40)).foregroundStyle(Theme.accent)
+                            Image(systemName: "arrow.down.doc.fill").font(.system(size: 40)).foregroundStyle(Theme.ink)
                             Text("松手导入口播稿").font(.system(size: 18, weight: .bold))
                             Text("支持 txt · md · docx · doc · rtf · pdf · html").font(.system(size: 12)).foregroundColor(.secondary)
                         }
@@ -51,7 +52,7 @@ struct LibraryView: View {
             return true
         }
         .frame(minWidth: 900, minHeight: 560)
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
     }
 }
 
@@ -87,7 +88,8 @@ private struct Sidebar: View {
         }
         .padding(.horizontal, 12)
         .padding(.bottom, 12)
-        .background(Color(hex: 0x111116))
+        .background(Theme.paperSide)
+        .overlay(alignment: .trailing) { Rectangle().fill(Theme.line).frame(width: 1).ignoresSafeArea() }
     }
 }
 
@@ -100,7 +102,7 @@ private struct IconButton: View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(.system(size: 13, weight: .medium))
-                .foregroundColor(.white.opacity(0.6))
+                .foregroundColor(Theme.ink2)
                 .frame(width: 26, height: 26)
                 .contentShape(Rectangle())
         }
@@ -122,12 +124,12 @@ private struct ScriptRow: View {
                 .lineLimit(1)
             Text(stats.units == 0 ? stats.countText : "\(stats.countText) · 约 \(Fmt.clock(stats.duration(speed: speed)))")
                 .font(.system(size: 11))
-                .foregroundColor(.white.opacity(0.45))
+                .foregroundColor(Theme.ink3)
         }
         .padding(.vertical, 9)
         .padding(.horizontal, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 9).fill(selected ? Color.white.opacity(0.08) : .clear))
+        .background(RoundedRectangle(cornerRadius: 9).fill(selected ? Theme.selRow : .clear))
         .contentShape(Rectangle())
     }
 }
@@ -166,17 +168,15 @@ private struct EditorPane: View {
                     Text("\(stats.countText) · 约 \(Fmt.clock(stats.duration(speed: settings.targetSpeed))) · \(stats.isLatin ? "English" : "中文")"
                          + (stats.cues > 0 ? " · \(stats.cues) 处提示" : ""))
                     Image(systemName: "questionmark.circle")
-                        .help("【停顿】【看镜头】写导演提示：显示成橙色，不用念，跟读时自动跳过。\n**重点** 标出要重读的词。")
+                        .help("# 大标题 · ## 中标题 · ### 小标题（⌘⌥1 / 2 / 3）：只是路牌，提词时不用念，可以用 ⌥⌘1…9 跳过去。\n【停顿】【看镜头】写导演提示：显示成橙色，不用念，跟读时自动跳过。\n**重点** 标出要重读的词。")
                 }
                 .font(.system(size: 12))
-                .foregroundColor(.white.opacity(0.45))
+                .foregroundColor(Theme.ink3)
 
-                TextEditor(text: b.body)
-                    .font(.system(size: 15))
-                    .lineSpacing(6)
-                    .scrollContentBackground(.hidden)
-                    .padding(14)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(0.04)))
+                ScriptEditor(text: b.body, documentID: store.selectedID)
+                    .padding(4)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Theme.sheet))
+                    .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.line))
                     .padding(.top, 6)
 
                 HStack(spacing: 12) {
@@ -186,16 +186,16 @@ private struct EditorPane: View {
                             Text("开始提词")
                         }
                         .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(Theme.onAccent)
+                        .foregroundColor(Theme.primaryText)
                         .padding(.horizontal, 26)
                         .frame(height: 40)
-                        .background(Capsule().fill(Theme.accent))
-                        .shadow(color: Theme.accent.opacity(0.18), radius: 14, y: 4)
+                        .background(Capsule().fill(Theme.primaryFill))
+                        .shadow(color: .black.opacity(0.14), radius: 10, y: 4)
                     }
                     .buttonStyle(PressStyle())
                     .keyboardShortcut(.return, modifiers: .command)
 
-                    Text("⌥⌘P").font(.system(size: 11.5, weight: .medium)).foregroundColor(.white.opacity(0.4))
+                    Text("⌥⌘P").font(.system(size: 11.5, weight: .medium)).foregroundColor(Theme.ink3)
                         .help("在任何 App 里按 ⌥⌘P 开始 / 暂停")
                     Spacer()
                 }
@@ -206,12 +206,12 @@ private struct EditorPane: View {
             .padding(.bottom, 22)
         } else {
             VStack(spacing: 14) {
-                Image(systemName: "text.badge.plus").font(.system(size: 44)).foregroundStyle(Theme.accent)
+                Image(systemName: "text.badge.plus").font(.system(size: 44)).foregroundStyle(Theme.ink)
                 Text("还没有稿件").font(.system(size: 18, weight: .bold))
                 Text("新建、粘贴，或者把 txt / md / docx / pdf 拖进来").foregroundColor(.secondary)
                 HStack {
-                    IslandButton(icon: "square.and.pencil", label: "新建稿件", prominent: true, action: actions.newScript)
-                    IslandButton(icon: "square.and.arrow.down", label: "导入文件", action: actions.importPanel)
+                    IslandButton(icon: "square.and.pencil", label: "新建稿件", prominent: true, onDark: false, action: actions.newScript)
+                    IslandButton(icon: "square.and.arrow.down", label: "导入文件", onDark: false, action: actions.importPanel)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -229,7 +229,7 @@ private struct SettingsPane: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
             VStack(alignment: .leading, spacing: 10) {
-                Text("显示样式").font(.system(size: 11.5, weight: .semibold)).foregroundColor(.white.opacity(0.45))
+                Text("显示样式").font(.system(size: 11.5, weight: .semibold)).foregroundColor(Theme.ink3)
                 HStack(spacing: 10) {
                     ForEach(DisplayStyle.allCases) { st in
                         StyleThumb(style: st, selected: settings.displayStyle == st) { actions.chooseStyle(st) }
@@ -240,9 +240,9 @@ private struct SettingsPane: View {
             HStack(spacing: 10) {
                 Text("字号").font(.system(size: 13))
                 Spacer()
-                Image(systemName: "textformat.size.smaller").font(.system(size: 10)).foregroundColor(.white.opacity(0.45))
+                Image(systemName: "textformat.size.smaller").font(.system(size: 10)).foregroundColor(Theme.ink3)
                 Slider(value: Binding(get: { settings.fontSize }, set: { settings.fontSize = $0.rounded() }), in: 16...36).controlSize(.small).tint(Theme.control).frame(width: 110)
-                Image(systemName: "textformat.size.larger").font(.system(size: 12)).foregroundColor(.white.opacity(0.45))
+                Image(systemName: "textformat.size.larger").font(.system(size: 12)).foregroundColor(Theme.ink3)
             }
             .help("\(Int(settings.fontSize)) pt")
 
@@ -266,17 +266,17 @@ private struct SettingsPane: View {
             Button(action: actions.resetPosition) {
                 HStack(spacing: 6) {
                     Image(systemName: "scope")
-                    Text("回到默认位置")
+                    Text("回到默认位置和大小")
                 }
                 .font(.system(size: 12.5, weight: .semibold))
-                .foregroundColor(.white.opacity(0.9))
+                .foregroundColor(Theme.buttonText)
                 .frame(maxWidth: .infinity)
                 .frame(height: 34)
-                .background(RoundedRectangle(cornerRadius: 9).fill(Color.white.opacity(0.07)))
+                .background(RoundedRectangle(cornerRadius: 9).fill(Theme.buttonFill))
                 .contentShape(Rectangle())
             }
             .buttonStyle(PressStyle())
-            .help("摄像头正下方。也可以直接双击提词卡片")
+            .help("摄像头正下方、预设大小。也可以直接双击提词卡片")
 
             Spacer()
             UpdateFooter(model: updates)
@@ -284,6 +284,7 @@ private struct SettingsPane: View {
         .padding(.horizontal, 20)
         .padding(.top, 44)
         .padding(.bottom, 20)
+        .overlay(alignment: .leading) { Rectangle().fill(Theme.line).frame(width: 1).ignoresSafeArea() }
     }
 }
 
@@ -310,17 +311,17 @@ private struct StyleThumb: View {
         Button(action: action) {
             VStack(spacing: 7) {
                 ZStack(alignment: .top) {
-                    RoundedRectangle(cornerRadius: 9).fill(Color(hex: 0x2C2C31))
+                    RoundedRectangle(cornerRadius: 9).fill(Theme.thumb)
                     Capsule().fill(Color.black).frame(width: 30, height: 6).offset(y: -1)
                     preview.padding(.top, 14)
                 }
                 .frame(height: 64)
                 .overlay(RoundedRectangle(cornerRadius: 9)
-                    .strokeBorder(selected ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(Color.white.opacity(0.08)),
+                    .strokeBorder(selected ? AnyShapeStyle(Theme.selection) : AnyShapeStyle(Theme.line),
                                   lineWidth: selected ? 2 : 1))
                 Text(style.title)
                     .font(.system(size: 11.5, weight: selected ? .semibold : .regular))
-                    .foregroundColor(selected ? .white : .white.opacity(0.5))
+                    .foregroundColor(selected ? Theme.ink : Theme.ink2)
             }
             .contentShape(Rectangle())
         }
@@ -330,12 +331,14 @@ private struct StyleThumb: View {
     @ViewBuilder private var preview: some View {
         if style == .glass {
             VStack(spacing: 4) {
-                Capsule().fill(Color.white.opacity(0.35)).frame(width: 46, height: 2.5)
-                Capsule().fill(Theme.accent).frame(width: 56, height: 3)
-                Capsule().fill(Color.white.opacity(0.35)).frame(width: 46, height: 2.5)
+                Capsule().fill(Theme.ink.opacity(0.22)).frame(width: 46, height: 2.5)
+                Capsule().fill(Theme.ink).frame(width: 56, height: 3)
+                    .background(Capsule().fill(Theme.highlighter).frame(width: 24, height: 6), alignment: .trailing)
+                Capsule().fill(Theme.ink.opacity(0.22)).frame(width: 46, height: 2.5)
             }
             .frame(width: 74, height: 34)
-            .background(RoundedRectangle(cornerRadius: 6).fill(Color.black.opacity(0.65)))
+            .background(RoundedRectangle(cornerRadius: 6).fill(Theme.paper))
+            .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Theme.line))
         } else {
             Capsule().fill(Theme.amber).frame(width: 40, height: 3)
                 .frame(width: 84, height: 18)

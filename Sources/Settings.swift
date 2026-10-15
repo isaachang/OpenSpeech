@@ -61,6 +61,22 @@ final class PrompterSettings: ObservableObject {
     @Published var screenID: String { didSet { d.set(screenID, forKey: "screenID") } }
     @Published var trackingLog: Bool { didSet { d.set(trackingLog, forKey: "trackingLog") } }
     @Published var saveAudio: Bool { didSet { d.set(saveAudio, forKey: "saveAudio") } }
+    /// 提词时右上角的“小抄”（整篇稿子）
+    @Published var cheatSheet: Bool { didSet { d.set(cheatSheet, forKey: "cheatSheet") } }
+    /// 操作提示：点过“知道了”，或者三种操作都做过一次，就不再提示
+    @Published var tipsDismissed: Bool { didSet { d.set(tipsDismissed, forKey: "tipsDismissed") } }
+    @Published var didMoveCard: Bool { didSet { d.set(didMoveCard, forKey: "didMoveCard") } }
+    @Published var didResizeCard: Bool { didSet { d.set(didResizeCard, forKey: "didResizeCard") } }
+    @Published var didResetCard: Bool { didSet { d.set(didResetCard, forKey: "didResetCard") } }
+    var showsCardTip: Bool { !tipsDismissed && !(didMoveCard && didResizeCard && didResetCard) }
+    /// 小抄的“可以拖动”提示：点过“知道了”或拖过一次就不再出现
+    @Published var cheatTipDismissed: Bool { didSet { d.set(cheatTipDismissed, forKey: "cheatTipDismissed") } }
+    /// 小抄左上角的位置（每块屏幕各自记住）；没有记录 = 右上角
+    @Published private(set) var cheatPositions: [String: CGPoint] {
+        didSet { d.set(cheatPositions.mapValues { [Double($0.x), Double($0.y)] }, forKey: "cheatPositions") }
+    }
+    func cheatPosition(for screen: String) -> CGPoint? { cheatPositions[screen] }
+    func setCheatPosition(_ p: CGPoint?, for screen: String) { cheatPositions[screen] = p }
     /// 每块屏幕各自记住的位置（两种样式共用）；没有记录 = 默认位置
     @Published private(set) var positions: [String: CardPosition] {
         didSet { d.set(positions.mapValues { [Double($0.dx), Double($0.readY)] }, forKey: "cardPositions") }
@@ -73,15 +89,26 @@ final class PrompterSettings: ObservableObject {
         targetSpeed = d.object(forKey: "targetSpeed") as? Double ?? 240
         fontSize = d.object(forKey: "fontSize") as? Double ?? 22
         displayStyle = DisplayStyle(rawValue: d.string(forKey: "displayStyle") ?? "") ?? .glass
-        glassChars = d.object(forKey: "glassChars") as? Int ?? 14
-        glassLines = d.object(forKey: "glassLines") as? Int ?? 3
-        captionChars = d.object(forKey: "captionChars") as? Int ?? 16
+        glassChars = d.object(forKey: "glassChars") as? Int ?? Self.defaultGlassChars
+        glassLines = d.object(forKey: "glassLines") as? Int ?? Self.defaultGlassLines
+        captionChars = d.object(forKey: "captionChars") as? Int ?? Self.defaultCaptionChars
         countdown = d.object(forKey: "countdown") as? Bool ?? true
         pauseOnSilence = d.object(forKey: "pauseOnSilence") as? Bool ?? true
         hideFromCapture = d.object(forKey: "hideFromCapture") as? Bool ?? true
         screenID = d.string(forKey: "screenID") ?? ""
         trackingLog = d.object(forKey: "trackingLog") as? Bool ?? true
         saveAudio = d.object(forKey: "saveAudio") as? Bool ?? false
+        cheatSheet = d.object(forKey: "cheatSheet") as? Bool ?? false
+        tipsDismissed = d.bool(forKey: "tipsDismissed")
+        didMoveCard = d.bool(forKey: "didMoveCard")
+        didResizeCard = d.bool(forKey: "didResizeCard")
+        didResetCard = d.bool(forKey: "didResetCard")
+        cheatTipDismissed = d.bool(forKey: "cheatTipDismissed")
+        var cp: [String: CGPoint] = [:]
+        for (k, v) in (d.dictionary(forKey: "cheatPositions") as? [String: [Double]]) ?? [:] where v.count == 2 {
+            cp[k] = CGPoint(x: v[0], y: v[1])
+        }
+        cheatPositions = cp
         var pos: [String: CardPosition] = [:]
         for (k, v) in (d.dictionary(forKey: "cardPositions") as? [String: [Double]]) ?? [:] where v.count == 2 {
             pos[k] = CardPosition(dx: CGFloat(v[0]), readY: CGFloat(v[1]))
@@ -109,6 +136,21 @@ final class PrompterSettings: ObservableObject {
 
     /// 文字区宽度（pt）：每行字数 × 字号（汉字基本是 1 em 宽）
     var textWidth: CGFloat { CGFloat(lineChars) * CGFloat(displayFontSize) * 1.02 }
+
+    /// 预设大小：玻璃卡片每行 14 字、3 行；字幕胶囊每行 16 字
+    static let defaultGlassChars = 14
+    static let defaultGlassLines = 3
+    static let defaultCaptionChars = 16
+
+    /// 当前样式的大小回到预设（双击卡片 / “回到默认位置和大小”）
+    func resetSize() {
+        if displayStyle == .glass {
+            glassChars = Self.defaultGlassChars
+            glassLines = Self.defaultGlassLines
+        } else {
+            captionChars = Self.defaultCaptionChars
+        }
+    }
 
     func position(for screen: String) -> CardPosition? { positions[screen] }
 

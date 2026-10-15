@@ -43,8 +43,12 @@ struct IslandRootView: View {
                                             removal: .opacity.animation(.easeIn(duration: 0.15))))
                 if let ctl = layout.controls {
                     ZStack {
-                        if model.cardHovering && !model.dragging && engine.phase == .presenting {
-                            CardControls(engine: engine, glass: settings.displayStyle == .glass).transition(.opacity)
+                        if let toast = model.cardToast {
+                            CardHint(text: toast, icon: "checkmark.circle.fill").transition(.opacity)
+                        } else if model.cardHovering && !model.dragging && engine.phase == .presenting {
+                            CardControls(engine: engine, glass: settings.displayStyle == .glass,
+                                         cheatOn: settings.cheatSheet, snapshot: model.snapshot) { settings.cheatSheet.toggle() }
+                                .transition(.opacity)
                         } else if let hint, !model.dragging {
                             CardHint(text: hint).transition(.opacity)
                         }
@@ -52,6 +56,25 @@ struct IslandRootView: View {
                     .frame(width: ctl.width, height: ctl.height)
                     .offset(x: ctl.minX, y: ctl.minY)
                     .animation(.easeOut(duration: 0.18), value: model.cardHovering)
+                    .animation(.easeOut(duration: 0.2), value: model.cardToast)
+                }
+                if let tip = layout.tip {
+                    CardTip(settings: settings)
+                        .frame(width: tip.width, height: tip.height, alignment: .topLeading)
+                        .offset(x: tip.minX, y: tip.minY)
+                        .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .leading)))
+                }
+            }
+            if let ch = layout.cheat {
+                CheatSheet(engine: engine, move: CheatMove(model: model, settings: settings, frame: ch)) { settings.cheatSheet = false }
+                    .frame(width: ch.width, height: ch.height)
+                    .offset(x: ch.minX, y: ch.minY)
+                    .transition(.opacity.combined(with: .offset(x: 24)))
+                if let tip = layout.cheatTip {
+                    CheatTip(settings: settings)
+                        .frame(width: tip.width, height: tip.height, alignment: .topLeading)
+                        .offset(x: tip.minX, y: tip.minY)
+                        .transition(.opacity)
                 }
             }
             island(layout.island)
@@ -59,7 +82,7 @@ struct IslandRootView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         // 拖动 / 调大小时卡片要紧跟鼠标，不加弹簧
-        .animation(model.dragging ? nil : spring, value: layout)
+        .animation(model.dragging || model.cheatDragPos != nil ? nil : spring, value: layout)
         .animation(spring, value: stateKey)
         .environment(\.colorScheme, .dark)
     }
@@ -131,11 +154,16 @@ private struct DropModifier: ViewModifier {
 
 struct TopStrip<L: View, R: View>: View {
     let notch: NotchInfo
+    var hPad: CGFloat = 24
+    /// 刘海两侧额外让出来的空隙，内容不会贴着真刘海被挡住
+    var notchGap: CGFloat = -5
     let left: L
     let right: R
 
-    init(notch: NotchInfo, @ViewBuilder left: () -> L, @ViewBuilder right: () -> R) {
+    init(notch: NotchInfo, hPad: CGFloat = 24, notchGap: CGFloat = -5, @ViewBuilder left: () -> L, @ViewBuilder right: () -> R) {
         self.notch = notch
+        self.hPad = hPad
+        self.notchGap = notchGap
         self.left = left()
         self.right = right()
     }
@@ -143,10 +171,10 @@ struct TopStrip<L: View, R: View>: View {
     var body: some View {
         HStack(spacing: 0) {
             left.frame(maxWidth: .infinity, alignment: .leading)
-            Color.clear.frame(width: max(0, notch.width - 10))
+            Color.clear.frame(width: max(0, notch.width + 2 * notchGap))
             right.frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .padding(.horizontal, 24)
+        .padding(.horizontal, hPad)
         .frame(height: notch.height)
     }
 }
@@ -162,11 +190,13 @@ struct PeekContent: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            TopStrip(notch: notch) {
+            // 外层已经有 24 的左右留白：顶部这一行不再额外缩进，Logo 和下面稿件标题的第一个字左对齐
+            TopStrip(notch: notch, hPad: 0, notchGap: 8) {
                 HStack(spacing: 6) {
                     AppGlyph(size: 15)
-                    Text("OpenSpeech").font(.system(size: 12, weight: .bold, design: .rounded))
+                    Text("OpenSpeech").font(.system(size: 12, weight: .bold, design: .rounded)).lineLimit(1)
                 }
+                .fixedSize()
             } right: {
                 Group {
                     if let flash {

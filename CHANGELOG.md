@@ -6,6 +6,34 @@ Format based on Keep a Changelog; versions follow Semantic Versioning.
 每个版本标题下面用 `>` 写一句给用户看的总结，App 里的「版本日志」和更新提示会显示它；每条的 “：” 或 “。” 之前是卡片上显示的短标题。
 The `>` line under each version is the one-line summary shown in the app.
 
+## [0.3.2] - 2026-10-15
+
+> 纸白配色和液态玻璃；用 # 标题给稿子分段，提词时一键跳到任意一段；新增可拖动的小抄。
+
+### 新增 Added
+- 标题：稿子里用 # 大标题、## 中标题、### 小标题分段。提词卡片上显示成灰色小路牌，不用念，跟读时自动跨过去。
+  Headings (#, ##, ###) split a script into sections; shown as signposts on the card and skipped by voice-follow.
+- 一键跳段：提词时按 ⌥⌘1…9 跳到第几段（只在提词时占用这组快捷键）。
+  ⌥⌘1–9 jumps to a section while prompting.
+- 小抄：提词时屏幕角落显示整篇稿子，跟着讲到哪滚到哪，点标题或段落就跳过去；可以拖到任何地方，双击回到右上角（⌥⌘O）。
+  Cheat sheet with the whole script: follows along, click to jump, draggable (⌥⌘O).
+- 编辑区边写边排版：标题、**重点**、【导演提示】直接显示成对应样子，# 和 ** 只在光标所在行显示；⌘⌥1 / 2 / 3 / 0 设成大 / 中 / 小标题 / 正文。
+  Live-styled Markdown editor; ⌘⌥1/2/3/0 for headings and body text.
+- 操作提示：第一次用时提示可以拖动、调大小、双击回到默认；光标在拖动条上变成手，四个角是调大小箭头；双击后有确认，吸到镜头中线时触控板轻震。
+  First-run tips, proper cursors, feedback on reset, and a haptic tick when snapping to the centerline.
+- 示例稿「面试故事库」：演示怎么用标题分段。A sample interview script that shows headings.
+
+### 变更 Changed
+- 界面改为纸白配色：主窗口浅色、黑字，每屏只有一个黑色主按钮。Paper-white theme.
+- 提词卡片和小抄改为液态玻璃：能隐约透出后面，正在读的字用荧光笔黄标出来。
+  Prompter card and cheat sheet use a light liquid-glass look; the current word gets a highlighter.
+- 双击提词卡片现在同时回到默认位置和预设大小。Double-click now also restores the preset size.
+- 加上 OpenSpeech 标志：在提词卡片顶部；刘海展开页里的标志和稿件标题对齐，不再被刘海挡住。
+  Logo on the card; notch header no longer hidden by the notch.
+
+### 修复 Fixed
+- 导入 .md 文件时不再丢掉 # 标题。Markdown imports keep their headings.
+
 ## [0.3.1] - 2026-10-15
 
 > 打开主窗口时也会检查新版本，发布后更快看到更新提示。

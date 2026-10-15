@@ -4,7 +4,8 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
-    let store = ScriptStore()
+    /// --demo-scripts：只用内置示例稿、不读写真实稿件库（截图 / 测试用）
+    let store = ScriptStore(inMemory: CommandLine.arguments.contains("--demo-scripts") || CommandLine.arguments.contains("--demo-interview"))
     let settings = PrompterSettings()
     lazy var engine = PrompterEngine(settings: settings)
     let updates = UpdateModel()
@@ -12,6 +13,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private var island: IslandController?
     private var libraryWindow: NSWindow?
     private var bag: Set<AnyCancellable> = []
+    /// 提词时才占用的 ⌥⌘1…9（跳到第几段）
+    private var sectionKeys: [UInt32] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.appearance = NSAppearance(named: .darkAqua)
@@ -19,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
         let args = CommandLine.arguments
         if args.contains("--no-audio") { engine.audioDisabled = true }
+        if args.contains("--demo-interview") { store.selectedID = store.scripts.first { $0.title.contains("面试") }?.id }
 
         island = IslandController(
             engine: engine, store: store, settings: settings,
@@ -144,6 +148,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         NSWorkspace.shared.open(SessionLogger.directory)
     }
     @objc func stopAction() { engine.stop() }
+    @objc func toggleCheatSheet() { settings.cheatSheet.toggle() }
     @objc func toggleTrackingLog() { settings.trackingLog.toggle() }
     @objc func toggleSaveAudio() { settings.saveAudio.toggle() }
 
@@ -178,7 +183,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             w.titlebarAppearsTransparent = true
             w.titleVisibility = .hidden
             w.isReleasedWhenClosed = false
-            w.backgroundColor = NSColor(red: 0.04, green: 0.04, blue: 0.06, alpha: 1)
+            w.backgroundColor = NSColor(red: 0.984, green: 0.98, blue: 0.969, alpha: 1)
+            w.appearance = NSAppearance(named: .aqua)
             w.contentView = NSHostingView(rootView: view)
             w.minSize = NSSize(width: 900, height: 560)
             w.center()
@@ -200,6 +206,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         hk.register(.down) { [weak self] in self?.engine.jumpLines(1) }
         hk.register(.left) { [weak self] in self?.engine.adjustSpeed(-10) }
         hk.register(.right) { [weak self] in self?.engine.adjustSpeed(10) }
+        hk.register(.o) { [weak self] in self?.toggleCheatSheet() }
+        // ⌥⌘1…9 只在提词、而且稿子里有标题时才占用；平时还给别的 App
+        engine.$phase.combineLatest(engine.$parsed)
+            .map { phase, parsed in phase.isActive ? min(9, parsed.sections.count) : 0 }
+            .removeDuplicates()
+            .sink { [weak self] n in self?.updateSectionKeys(n) }
+            .store(in: &bag)
+    }
+
+    private func updateSectionKeys(_ count: Int) {
+        sectionKeys.forEach { HotKeyCenter.shared.unregister($0) }
+        sectionKeys = HotKeyCenter.Key.digits.prefix(count).enumerated().compactMap { n, key in
+            HotKeyCenter.shared.register(key) { [weak self] in self?.engine.jump(toSection: n) }
+        }
     }
 
     private func buildMenu() {
@@ -223,7 +243,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         file.addItem(.separator())
         file.addItem(item("开始 / 暂停提词（⌥⌘P）", #selector(toggleAction), ""))
         file.addItem(item("结束提词（⌥⌘.）", #selector(stopAction), ""))
-        file.addItem(item("提词器回到默认位置", #selector(resetPosition), ""))
+        file.addItem(item("提词器回到默认位置和大小", #selector(resetPosition), ""))
+        file.addItem(item("显示 / 隐藏小抄（⌥⌘O）", #selector(toggleCheatSheet), ""))
         file.addItem(.separator())
         // 开发 / 调优用的选项，放在菜单里，不占设置面板
         let dev = NSMenu(title: "开发者选项")
@@ -246,6 +267,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         edit.addItem(withTitle: "拷贝", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
         edit.addItem(withTitle: "粘贴", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
         edit.addItem(withTitle: "全选", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        edit.addItem(.separator())
+        // 和 Notion 一样：⌘⌥1 / 2 / 3 大 / 中 / 小标题，⌘⌥0 正文
+        for (title, sel, key) in [("大标题", #selector(ScriptTextView.setHeading1(_:)), "1"),
+                                  ("中标题", #selector(ScriptTextView.setHeading2(_:)), "2"),
+                                  ("小标题", #selector(ScriptTextView.setHeading3(_:)), "3"),
+                                  ("正文", #selector(ScriptTextView.setBodyText(_:)), "0")] {
+            let i = edit.addItem(withTitle: title, action: sel, keyEquivalent: key)
+            i.keyEquivalentModifierMask = [.command, .option]
+        }
         addSubmenu(edit, to: main)
 
         let window = NSMenu(title: "窗口")

@@ -52,6 +52,7 @@ final class ScriptStore: ObservableObject {
             scripts = [
                 Script(title: "示例：一分钟产品口播", body: SampleScripts.chinese),
                 Script(title: "Sample: 30s English Pitch", body: SampleScripts.english),
+                Script(title: "示例：面试故事库（用 ## 分段）", body: SampleScripts.interview),
             ]
         }
         selectedID = scripts.first?.id
@@ -154,7 +155,7 @@ enum ScriptImporter {
     static func cleanMarkdown(_ s: String) -> String {
         var t = s
         let rules: [(String, String)] = [
-            (#"(?m)^\s{0,3}#{1,6}\s*"#, ""),
+            (#"(?m)^\s{0,3}(#{1,6})\s*"#, "$1 "),
             (#"(?m)^\s{0,3}>\s?"#, ""),
             (#"(?m)^\s*[-+]\s+"#, ""),
             (#"(?m)^\s*\*\s+"#, ""),
@@ -178,6 +179,29 @@ enum ScriptImporter {
 }
 
 enum SampleScripts {
+    /// 演示 # / ## 标题：标题只是路牌，不用念；提词时按 ⌥⌘1…9 跳到第几段，或在小抄里点标题
+    static let interview = """
+    # 产品经理面试
+
+    ## 自我介绍
+    面试官好，我叫林然，目前在做 B 端产品，主要负责企业协作工具。
+    我习惯先把用户的问题想清楚，再动手做方案。
+
+    ## 团队冲突：跨部门排期
+    那次我们和设计组在上线时间上卡住了。
+    我先把两边的**顾虑**都列出来，再找一个大家都能接受的最小版本。
+    最后提前一周上线了核心功能，设计组也有时间打磨细节。
+
+    ## 第一次项目失败
+    大二做的那个校园二手 App，上线一个月只有四十个用户。
+    复盘下来，问题是我们没有先验证需求，就直接开始写代码了。
+    从那以后，我做任何功能都会先找五个真实用户聊一聊。
+
+    ## 为什么选择我们
+    我关注贵司很久了，尤其是你们在协作工具上的思路。
+    我希望能把自己做 B 端产品的经验，用在更大的平台上。
+    """
+
     static let chinese = """
     【看镜头，微笑】
     大家好！你有没有发现，录口播最难的往往不是内容，而是**记稿子**？
