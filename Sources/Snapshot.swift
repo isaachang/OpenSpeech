@@ -159,42 +159,9 @@ enum ReadmeSnapshot {
             return 0
         }
 
-        /// 被共享出去的那块屏幕：一页演示文稿
-        func slide() -> some View {
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 6) {
-                    ForEach([0xFF5F57, 0xFEBC2E, 0x28C840], id: \.self) { c in Circle().fill(Color(hex: UInt32(c))).frame(width: 9, height: 9) }
-                    Spacer()
-                }
-                .padding(10)
-                .background(Color(hex: 0xECECEF))
-                VStack(alignment: .leading, spacing: 14) {
-                    Text(zh ? "Q3 产品规划" : "Q3 Product Plan").font(.system(size: 30, weight: .bold)).foregroundColor(Color(hex: 0x1C1C1E))
-                    ForEach(zh ? ["用户增长：月活 +35%", "上线协作空间", "移动端体验重做"] : ["Growth: MAU +35%", "Launch shared workspaces", "Rebuild the mobile app"], id: \.self) { t in
-                        HStack(spacing: 10) {
-                            RoundedRectangle(cornerRadius: 2).fill(Color(hex: 0x5B5BD6)).frame(width: 4, height: 18)
-                            Text(t).font(.system(size: 17)).foregroundColor(Color(hex: 0x3A3A3F))
-                        }
-                    }
-                    HStack(alignment: .bottom, spacing: 14) {
-                        ForEach([0.45, 0.62, 0.8, 1.0], id: \.self) { h in
-                            RoundedRectangle(cornerRadius: 4).fill(Color(hex: 0x5B5BD6).opacity(0.25 + 0.6 * h)).frame(width: 46, height: 110 * h)
-                        }
-                    }
-                    .padding(.top, 6)
-                    Spacer()
-                }
-                .padding(28)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .background(Color.white)
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .shadow(color: .black.opacity(0.3), radius: 24, y: 12)
-        }
-
         func render(_ name: String, w: CGFloat, h: CGFloat, cursor: Double, style: DisplayStyle = .glass,
-                    cheat: Bool = false, cardHovering: Bool = false, showCard: Bool = true, presentation: Bool = false,
-                    transparent: Bool = false) {
+                    cheat: Bool = false, cardHovering: Bool = false, showCard: Bool = true,
+                    transparent: Bool = false, lens: Bool = false) {
             let settings = PrompterSettings(defaults: defaults)
             settings.displayStyle = style
             settings.cheatSheet = cheat
@@ -217,7 +184,9 @@ enum ReadmeSnapshot {
                     LinearGradient(colors: [Color(hex: 0x3C3F8F), Color(hex: 0x6A4E8E), Color(hex: 0xB9787E), Color(hex: 0xD99A7C)],
                                    startPoint: .topLeading, endPoint: .bottomTrailing)
                 }
-                if presentation { slide().padding(.horizontal, 70).padding(.top, 140).padding(.bottom, 40) }
+                if lens, let card = IslandMetrics.layout(engine: engine, model: model, settings: settings).card {
+                    CameraGuide(notch: notch, cameraY: geo.cameraY, card: card, width: w, annotate: false)
+                }
                 if showCard {
                     IslandRootView(model: model, engine: engine, store: s, settings: settings, actions: actions, acceptsDrop: false)
                 }
@@ -231,14 +200,11 @@ enum ReadmeSnapshot {
             }
         }
 
-        // 首图 / 提词卡片：停在 “OpenSpeech 是什么” 这一段，荧光笔在 “镜头” / “eye contact”
+        // 首图 / 提词卡片：停在 “OpenSpeech 是什么” 这一段。首图用整块屏幕的宽度（14 寸 MacBook Pro 1800 pt），
+        // 卡片和摄像头的距离、占屏幕的比例都和真实默认位置一样
         let whatItIs = zh ? unit("摄像头") : unit("right below the camera", offset: 1)
-        render("hero", w: 1280, h: 640, cursor: whatItIs, cheat: true)
-        render("card", w: 900, h: 400, cursor: whatItIs, cardHovering: true)
-        // 共享屏幕对比：你看到的（演示文稿 + 提词卡片）和对方看到的（只有演示文稿）
-        render("share-you", w: 900, h: 560, cursor: whatItIs, presentation: true)
-        render("share-them", w: 900, h: 560, cursor: whatItIs, showCard: false, presentation: true)
-        // 只有提词卡片、背景透明：叠到真实桌面截图上（共享屏幕对比图用）
-        render("card-only", w: 900, h: 600, cursor: whatItIs, transparent: true)
+        render("hero", w: 1800, h: 640, cursor: whatItIs, cheat: true, lens: true)
+        // 只有提词卡片、背景透明、整块屏幕大小：按真实位置叠到桌面截图上（共享屏幕对比图用）
+        render("card-only", w: 1800, h: 1125, cursor: whatItIs, transparent: true)
     }
 }

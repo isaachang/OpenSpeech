@@ -43,13 +43,13 @@ OpenSpeech puts your script as close to the lens as possible and lets it follow 
 
 Your script sits about 5° below the camera. The word you're on gets a highlighter, so one glance tells you where you are.
 
-<p align="center"><img src="docs/images/en/eye.webp" width="600" alt="The prompter card right below the camera, the highlighter moving as you read"></p>
+<p align="center"><img src="docs/images/en/eye.webp" width="100%" alt="The prompter card right below the camera, the highlighter moving as you read"></p>
 
 ### 02 · Fast or slow, it keeps up
 
 On-device speech recognition tracks where you are. Talk faster and it speeds up; slow down and it slows too; pause and it waits; go off script and it holds still. Headings are signposts you don't read aloud, and it steps right over them.
 
-<p align="center"><img src="docs/images/en/follow.webp" width="600" alt="How the prompter reacts when you talk faster, slow down, pause or go off script"></p>
+<p align="center"><img src="docs/images/en/follow.webp" width="100%" alt="How the prompter reacts when you talk faster, slow down, pause or go off script"></p>
 
 ### 03 · Invisible when you share your screen
 

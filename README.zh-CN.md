@@ -43,13 +43,13 @@ OpenSpeech 把稿子放到离镜头最近的地方，让它自己跟着你的声
 
 稿子贴在摄像头正下方约 5°。正在读的字用荧光笔标出来，扫一眼就知道讲到哪了。
 
-<p align="center"><img src="docs/images/eye.webp" width="600" alt="摄像头正下方的提词卡片，荧光笔跟着朗读往前走"></p>
+<p align="center"><img src="docs/images/eye.webp" width="100%" alt="摄像头正下方的提词卡片，荧光笔跟着朗读往前走"></p>
 
 ### 02 · 讲快讲慢，它都跟得上
 
 本机语音识别听你讲到哪：讲快它就快，讲慢它就慢，停下它就等你，脱稿也不会乱跳。标题只是路牌，不用念，会自动跨过去。
 
-<p align="center"><img src="docs/images/follow.webp" width="600" alt="讲快、讲慢、停下、脱稿时提词器的反应"></p>
+<p align="center"><img src="docs/images/follow.webp" width="100%" alt="讲快、讲慢、停下、脱稿时提词器的反应"></p>
 
 ### 03 · 共享屏幕时，对方看不到
 

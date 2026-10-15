@@ -131,12 +131,12 @@ enum ReadmeVideo {
         follow.read(zh ? "它不会乱跳等你回到稿子再接着走" : "holds still until you come back", rate: normal, .normal)
         follow.hold(1.4, .normal)
 
-        render(eye, name: "eye", dir: dir, script: pitch, size: CGSize(width: 900, height: 480), camera: true, pill: false)
-        render(follow, name: "follow", dir: dir, script: pitch, size: CGSize(width: 900, height: 480), camera: false, pill: true)
+        render(eye, name: "eye", dir: dir, script: pitch, size: CGSize(width: 1800, height: 560), camera: true, annotate: true, pill: false)
+        render(follow, name: "follow", dir: dir, script: pitch, size: CGSize(width: 1800, height: 560), camera: true, annotate: false, pill: true)
     }
 
     @MainActor
-    static func render(_ tl: Timeline, name: String, dir: String, script: Script, size: CGSize, camera: Bool, pill: Bool) {
+    static func render(_ tl: Timeline, name: String, dir: String, script: Script, size: CGSize, camera: Bool, annotate: Bool, pill: Bool) {
         let out = URL(fileURLWithPath: dir).appendingPathComponent(name)
         try? FileManager.default.removeItem(at: out)
         try? FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
@@ -179,12 +179,12 @@ enum ReadmeVideo {
             let view = ZStack(alignment: .topLeading) {
                 LinearGradient(colors: [Color(hex: 0x3C3F8F), Color(hex: 0x6A4E8E), Color(hex: 0xB9787E), Color(hex: 0xD99A7C)],
                                startPoint: .topLeading, endPoint: .bottomTrailing)
-                if camera { CameraGuide(cameraY: model.geo.cameraY, card: card, width: size.width) }
+                if camera { CameraGuide(notch: model.notch, cameraY: model.geo.cameraY, card: card, width: size.width, annotate: annotate) }
                 IslandRootView(model: model, engine: engine, store: store, settings: settings, actions: actions, acceptsDrop: false)
                 if pill {
                     MomentPill(moment: m, levels: levels, speed: speed(m), fade: fade)
                         .frame(width: size.width)
-                        .offset(y: card.maxY + 22)
+                        .offset(y: card.maxY + 30)
                 }
             }
             .frame(width: size.width, height: size.height)
@@ -211,36 +211,55 @@ enum ReadmeVideo {
     }
 }
 
-/// 01：摄像头在屏幕正上方，卡片正在读的那一行就在它下面约 5°
-private struct CameraGuide: View {
+/// 屏幕顶上的硬件刘海，里面淡淡一颗摄像头，旁边标注 “摄像头”；
+/// annotate 时再画出视线和 “≈ 5°”：卡片正在读的那一行就在镜头下面约 5°。
+/// README 里整块屏幕宽的图会缩小到一半左右显示，所以标注文字画得比界面大
+struct CameraGuide: View {
+    let notch: NotchInfo
     let cameraY: CGFloat
     let card: CGRect
     let width: CGFloat
+    var annotate = true
 
     var body: some View {
         let x = width / 2
         ZStack(alignment: .topLeading) {
-            // 镜头
-            Circle().fill(Color(hex: 0x111114)).frame(width: 13, height: 13)
-                .overlay(Circle().fill(Color(hex: 0x2E3550)).frame(width: 5, height: 5))
-                .overlay(Circle().stroke(.white.opacity(0.35), lineWidth: 1))
+            NotchShape(topRadius: 6, bottomRadius: 11)
+                .fill(Color.black)
+                .frame(width: notch.width + 12, height: notch.height)
+                .position(x: x, y: notch.height / 2)
+            // 镜头：只看得出一点点
+            Circle().fill(Color(hex: 0x15171F)).frame(width: 9, height: 9)
+                .overlay(Circle().fill(Color(hex: 0x2A3350)).frame(width: 4, height: 4))
+                .overlay(Circle().fill(.white.opacity(0.35)).frame(width: 1.6, height: 1.6).offset(x: -1.4, y: -1.4))
                 .position(x: x, y: cameraY)
-            Text(tr("摄像头", "Camera"))
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(.white.opacity(0.85))
-                .position(x: x + 44, y: cameraY)
-            // 视线：镜头 → 卡片
+            // 标注：从镜头拉一条细线到刘海右边
             Path { p in
-                p.move(to: CGPoint(x: x, y: cameraY + 12))
-                p.addLine(to: CGPoint(x: x, y: card.minY - 6))
+                p.move(to: CGPoint(x: x + 8, y: cameraY))
+                p.addLine(to: CGPoint(x: x + notch.width / 2 + 34, y: cameraY))
             }
-            .stroke(.white.opacity(0.55), style: StrokeStyle(lineWidth: 1.2, dash: [3, 4]))
-            Text(tr("≈ 5°，看稿就像在看镜头", "≈ 5° — reading looks like eye contact"))
-                .font(.system(size: 12.5, weight: .medium))
-                .foregroundColor(.white.opacity(0.9))
-                .padding(.horizontal, 10).padding(.vertical, 4)
-                .background(Capsule().fill(.white.opacity(0.14)))
-                .position(x: x, y: (cameraY + card.minY) / 2 + 4)
+            .stroke(.white.opacity(0.55), lineWidth: 1.2)
+            Circle().fill(.white.opacity(0.8)).frame(width: 4, height: 4).position(x: x + 8, y: cameraY)
+            Text(tr("摄像头", "Camera"))
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundColor(.white.opacity(0.92))
+                .fixedSize()
+                .frame(width: 160, alignment: .leading)
+                .position(x: x + notch.width / 2 + 44 + 80, y: cameraY)
+            if annotate {
+                Path { p in
+                    p.move(to: CGPoint(x: x, y: notch.height + 8))
+                    p.addLine(to: CGPoint(x: x, y: card.minY - 8))
+                }
+                .stroke(.white.opacity(0.6), style: StrokeStyle(lineWidth: 2, dash: [5, 6]))
+                Text(tr("≈ 5°，看稿就像在看镜头", "≈ 5° — reading looks like eye contact"))
+                    .font(.system(size: 21, weight: .semibold))
+                    .foregroundColor(.white)
+                    .fixedSize()
+                    .padding(.horizontal, 18).padding(.vertical, 8)
+                    .background(Capsule().fill(.white.opacity(0.16)))
+                    .position(x: x, y: (notch.height + card.minY) / 2 + 4)
+            }
         }
         .frame(width: width, alignment: .topLeading)
     }
@@ -254,33 +273,33 @@ private struct MomentPill: View {
     let fade: Double
 
     var body: some View {
-        HStack(spacing: 12) {
-            HStack(alignment: .center, spacing: 2.5) {
+        HStack(spacing: 18) {
+            HStack(alignment: .center, spacing: 4) {
                 ForEach(levels.indices, id: \.self) { i in
                     Capsule()
                         .fill(moment.speaking ? Theme.ink : Theme.ink3.opacity(0.5))
-                        .frame(width: 3, height: 3 + 14 * levels[i])
+                        .frame(width: 5, height: 5 + 24 * levels[i])
                 }
             }
-            .frame(width: 24, height: 18)
-            HStack(spacing: 8) {
+            .frame(width: 40, height: 30)
+            HStack(spacing: 12) {
                 Text(moment.said).foregroundColor(Theme.ink)
-                Image(systemName: "arrow.right").font(.system(size: 11, weight: .bold)).foregroundColor(Theme.ink3)
+                Image(systemName: "arrow.right").font(.system(size: 18, weight: .bold)).foregroundColor(Theme.ink3)
                 Text(moment.result).foregroundColor(Theme.ink2)
             }
-            .font(.system(size: 15, weight: .semibold))
+            .font(.system(size: 26, weight: .semibold))
             .opacity(fade)
-            Rectangle().fill(Theme.ink3.opacity(0.35)).frame(width: 1, height: 16)
+            Rectangle().fill(Theme.ink3.opacity(0.35)).frame(width: 1.5, height: 28)
             Text(speed)
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .font(.system(size: 22, weight: .semibold, design: .rounded))
                 .monospacedDigit()
                 .foregroundColor(Theme.ink2)
-                .frame(minWidth: 62)
+                .frame(minWidth: 110)
                 .opacity(fade)
         }
-        .padding(.horizontal, 18)
-        .frame(height: 44)
+        .padding(.horizontal, 30)
+        .frame(height: 72)
         .background(Capsule().fill(Color.white.opacity(0.9)))
-        .shadow(color: .black.opacity(0.18), radius: 14, y: 6)
+        .shadow(color: .black.opacity(0.18), radius: 22, y: 10)
     }
 }
