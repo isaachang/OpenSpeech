@@ -113,7 +113,7 @@ struct CheatParagraph: Identifiable {
             if let g = r.first(where: { !p.glyphs[$0].char.isWhitespace }), p.glyphs[g].style == .heading,
                let h = p.headings.first(where: { $0.glyphs.contains(g) }) {
                 para.heading = h
-                if h.level == p.sectionLevel { para.number = p.sections.firstIndex(of: h).map { $0 + 1 } }
+                para.number = p.sections.firstIndex(of: h).map { $0 + 1 }
             }
             out.append(para)
         }

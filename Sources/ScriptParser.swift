@@ -64,8 +64,15 @@ struct ParsedScript {
     var headings: [ScriptHeading] = []
 
     /// 用来分段、编号、⌥⌘1…9 跳转的那一级标题：有 ## 就用 ##，没有就用 #
-    var sectionLevel: Int? { headings.contains { $0.level == 2 } ? 2 : headings.map(\.level).min() }
-    var sections: [ScriptHeading] { headings.filter { $0.level == sectionLevel } }
+    /// 能跳的段落：# 和 ## 都算，按出现的顺序编号；### 是小标题，只有整篇都没有 # / ## 时才拿来分段
+    var sections: [ScriptHeading] {
+        let top = headings.filter { $0.level <= 2 }
+        if !top.isEmpty { return top }
+        let m = headings.map(\.level).min()
+        return headings.filter { $0.level == m }
+    }
+    /// 段落里最高的一级：比它低的（# 下面的 ##）在段落列表里往里缩一格
+    var sectionTopLevel: Int? { sections.map(\.level).min() }
 
     /// 某个字落在第几段（从 0 开始；在第一个标题之前是 nil）
     func section(at unit: Int) -> Int? {

@@ -89,4 +89,18 @@ do { var tr = Tracker(units: p.units); let s = pos(of: "你讲快"); tr.reset(to
   var acc = ""; for ch in bad { acc.append(ch); clock += 0.25; _ = tr.process(ParsedScript.parse(acc, markup: false, chineseNumbers: true).units, now: clock) }
   check("识别很烂但念过来了：能追上", tr.cursor >= pos(of: "跳过一句") , "cursor=\(tr.cursor) exp≥\(pos(of: "跳过一句"))")
 }
+// 12. 分段：# 和 ## 都算一段，按顺序编号；### 只是小标题
+do { let q = ParsedScript.parse("# 开场\n大家好。\n## 自我介绍\n我叫林然。\n### 小点\n补充一句。")
+  check("# 和 ## 都算段落", q.sections.map(\.title) == ["开场", "自我介绍"], "\(q.sections.map(\.title))")
+}
+// 13. 整篇只有 ###：用 ### 分段
+do { let q = ParsedScript.parse("### 一\n第一句。\n### 二\n第二句。")
+  check("只有 ### 时用它分段", q.sections.map(\.title) == ["一", "二"], "\(q.sections.map(\.title))")
+}
+// 14. # 下面紧跟 ##、中间没内容：两段在同一个位置，当前段算 ##
+do { let q = ParsedScript.parse("# 第一部分\n## 项目 A\n内容一。\n## 项目 B\n内容二。")
+  let s = q.sections
+  check("空的大标题和下面的小节同一位置", s.count == 3 && s[0].nextUnit == s[1].nextUnit && q.section(at: s[1].nextUnit) == 1,
+        "count=\(s.count) cur=\(String(describing: q.section(at: s.isEmpty ? 0 : s[1].nextUnit)))")
+}
 print(failures == 0 ? "ALL PASS" : "\(failures) FAILED")

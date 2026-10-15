@@ -266,7 +266,7 @@ private struct EditorPane: View {
                             "\(stats.countText) · ~\(Fmt.clock(stats.duration(speed: settings.targetSpeed))) · \(stats.isLatin ? "English" : "Chinese")")
                          + (stats.cues > 0 ? tr(" · \(stats.cues) 处提示", " · \(stats.cues) cues") : ""))
                     Image(systemName: "questionmark.circle")
-                        .help(tr("# 大标题 · ## 中标题 · ### 小标题（⌘⌥1 / 2 / 3）：只是路牌，提词时不用念，可以用 ⌥⌘1…9 跳过去。\n【停顿】【看镜头】写导演提示：显示成橙色，不用念，跟读时自动跳过。\n**重点** 标出要重读的词。", "# large · ## medium · ### small heading (⌘⌥1 / 2 / 3): signposts you don't read aloud; jump to them with ⌥⌘1…9.\n[Pause] or 【…】 are stage directions: orange, optional to read.\n**word** marks emphasis."))
+                        .help(tr("# 大标题 · ## 中标题 · ### 小标题（⌘⌥1 / 2 / 3）：只是路牌，提词时不用念。# 和 ## 是段落，提词时可以跳过去（⌥⌘← / ⌥⌘→、⌥⌘1…9）。\n【停顿】【看镜头】写导演提示：显示成橙色，不用念，跟读时自动跳过。\n**重点** 标出要重读的词。", "# large · ## medium · ### small heading (⌘⌥1 / 2 / 3): signposts you don't read aloud. # and ## are sections you can jump to (⌥⌘← / ⌥⌘→, ⌥⌘1…9).\n[Pause] or 【…】 are stage directions: orange, optional to read.\n**word** marks emphasis."))
                 }
                 .font(.system(size: 12))
                 .foregroundColor(Theme.ink3)

@@ -225,8 +225,6 @@ enum ScriptImporter {
 enum SampleScripts {
     /// 产品介绍（README 截图也用这一篇）：痛点 → 是什么 → 怎么跟着你 → 开会也能用 → 免费开源
     static let pitch = """
-    # OpenSpeech 一分钟介绍
-
     ## 痛点
     对着镜头讲话，最难的不是内容，而是记稿子。
     眼睛一会儿看稿、一会儿看镜头，观众一眼就看得出你在念。
@@ -248,8 +246,6 @@ enum SampleScripts {
     """
 
     static let pitchEnglish = """
-    # OpenSpeech in One Minute
-
     ## The problem
     Talking to a camera is easy. Remembering the script is not.
     Your eyes jump between the script and the lens, and everyone can tell.
@@ -272,8 +268,6 @@ enum SampleScripts {
 
     /// 英文版的面试故事库（人名是虚构的）
     static let interviewEnglish = """
-    # Product Manager Interview
-
     ## About me
     Hi, I'm Alex. I'm a product manager working on team collaboration tools.
     I like to understand the user's problem before I design anything.
@@ -295,8 +289,6 @@ enum SampleScripts {
 
     /// 演示 # / ## 标题：标题只是路牌，不用念；提词时按 ⌥⌘1…9 跳到第几段，或在小抄里点标题
     static let interview = """
-    # 产品经理面试
-
     ## 自我介绍
     面试官好，我叫林然，目前在做 B 端产品，主要负责企业协作工具。
     我习惯先把用户的问题想清楚，再动手做方案。

@@ -246,9 +246,24 @@ final class PrompterEngine: ObservableObject {
     var currentSection: Int? { parsed.section(at: Int(cursor)) }
 
     /// ⌥⌘← / ⌥⌘→、卡片顶上的 ‹ ›：上一段 / 下一段
+    /// “# 第一部分” 下面紧跟着 “## 项目 A”、中间没有要念的内容时，两者是同一个位置：不在空的大标题上停一下
     func stepSection(_ d: Int) {
-        let n = d > 0 ? (currentSection ?? -1) + 1 : (currentSection ?? 0) - 1
-        jump(toSection: n)
+        if let n = sectionTarget(d) { jump(toSection: n) }
+    }
+
+    /// 上一段 / 下一段会跳到第几段；没有可去的段是 nil（‹ › 变灰）
+    func sectionTarget(_ d: Int) -> Int? {
+        let secs = parsed.sections
+        guard !secs.isEmpty else { return nil }
+        let here = currentSection.map { secs[$0].nextUnit } ?? -1
+        var n = d > 0 ? (currentSection ?? -1) + 1 : (currentSection ?? 0) - 1
+        if d > 0 {
+            guard n < secs.count else { return nil }
+            while n + 1 < secs.count, secs[n].nextUnit == secs[n + 1].nextUnit { n += 1 }
+        } else {
+            while n >= 0, secs[n].nextUnit >= here { n -= 1 }
+        }
+        return secs.indices.contains(n) ? n : nil
     }
 
     func adjustSpeed(_ d: Double) {

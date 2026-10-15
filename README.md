@@ -61,7 +61,7 @@ In a meeting or interview, people see your screen, never your script.
 
 ### 04 · Jump to any story in an interview
 
-Split your script into stories with `##`. While prompting, `⌥⌘1…9` jumps to a section, and the cheat sheet shows the whole script beside you; click any part to jump there.
+Split your script into stories with `#` or `##` headings. While prompting, the card shows which section you're on; click its name or press `⌥⌘←` `⌥⌘→` to switch, or `⌥⌘1…9` to jump, and the cheat sheet shows the whole script beside you; click any part to jump there.
 
 <p align="center"><img src="docs/images/en/cheat-sheet.png" width="340" alt="Cheat sheet"></p>
 

@@ -595,7 +595,7 @@ struct HeadingSignpost: View {
     static func heading(for line: PrompterLine, in p: ParsedScript) -> (heading: ScriptHeading, number: Int?)? {
         guard let g = line.glyphs.first(where: { !p.glyphs[$0].char.isWhitespace }), p.glyphs[g].style == .heading,
               let h = p.headings.first(where: { $0.glyphs.contains(g) }) else { return nil }
-        let n = h.level == p.sectionLevel ? p.sections.firstIndex(of: h).map { $0 + 1 } : nil
+        let n = p.sections.firstIndex(of: h).map { $0 + 1 }
         return (h, n)
     }
 }

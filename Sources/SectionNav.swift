@@ -11,7 +11,7 @@ struct PanelHover<Content: View>: View {
         content(mouse.map { frame.contains($0) } ?? false)
             .background(GeometryReader { g in
                 let f = g.frame(in: .named(IslandRootView.space))
-                Color.clear.onAppear { frame = f }.onChange(of: f) { frame = $0 }
+                Color.clear.onAppear { frame = f }.onChange(of: f) { _, new in frame = new }
             })
     }
 }
@@ -28,7 +28,7 @@ struct SectionNav: View {
         let cur = engine.currentSection
         HStack(spacing: 6) {
             if expanded {
-                arrow("chevron.left", enabled: (cur ?? 0) > 0, tip: tr("上一段  ⌥⌘←", "Previous section  ⌥⌘←")) { engine.stepSection(-1) }
+                arrow("chevron.left", enabled: engine.sectionTarget(-1) != nil, tip: tr("上一段  ⌥⌘←", "Previous section  ⌥⌘←")) { engine.stepSection(-1) }
             }
             PanelHover(mouse: model.mouse) { hover in
                 Button { model.sectionMenuOpen.toggle() } label: {
@@ -54,7 +54,7 @@ struct SectionNav: View {
                 .buttonStyle(PressStyle())
             }
             if expanded {
-                arrow("chevron.right", enabled: (cur ?? -1) + 1 < secs.count, tip: tr("下一段  ⌥⌘→", "Next section  ⌥⌘→")) { engine.stepSection(1) }
+                arrow("chevron.right", enabled: engine.sectionTarget(1) != nil, tip: tr("下一段  ⌥⌘→", "Next section  ⌥⌘→")) { engine.stepSection(1) }
             }
         }
         .frame(maxWidth: maxWidth)
@@ -113,7 +113,8 @@ struct SectionMenu: View {
                             Spacer(minLength: 6)
                             if i < 9 { Text("⌥⌘\(i + 1)").font(.system(size: 11)).foregroundColor(Theme.ink3) }
                         }
-                        .padding(.horizontal, 9)
+                        .padding(.leading, 9 + CGFloat(s.level - (engine.parsed.sectionTopLevel ?? s.level)) * 16)
+                        .padding(.trailing, 9)
                         .frame(height: IslandMetrics.sectionRowHeight)
                         .background(RoundedRectangle(cornerRadius: 8).fill(Color.black.opacity(hover ? 0.07 : i == cur ? 0.04 : 0)))
                         .contentShape(Rectangle())
