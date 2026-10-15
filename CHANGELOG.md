@@ -3,7 +3,32 @@
 格式参考 [Keep a Changelog](https://keepachangelog.com/)，版本号遵循 [语义化版本](https://semver.org/)。
 Format based on Keep a Changelog; versions follow Semantic Versioning.
 
+每个版本标题下面用 `>` 写一句给用户看的总结，App 里的「版本日志」和更新提示会显示它；每条的 “：” 或 “。” 之前是卡片上显示的短标题。
+The `>` line under each version is the one-line summary shown in the app.
+
+## [0.3.0] - 2026-10-14
+
+> 可以在 App 里一键更新了，还能随时翻看每个版本改了什么；界面换成黑白配色和新图标。
+
+### 新增 Added
+- App 内一键更新：打开 App 时自动检查新版本，主窗口顶部出现提示；点“立即更新”自动下载、校验、安装并重新打开，稿件和设置都保留。正在提词时不打扰，讲完再提示。
+  In-app updates (Sparkle): checks on launch, banner in the main window, one click to download, verify, install and relaunch. Never interrupts while prompting.
+- 版本日志：右下角“版本日志”用卡片列出每个版本更新了什么。
+  Version history cards in the main window.
+- 每个版本用同一张本机签名证书签名：更新后不需要重新允许麦克风和语音识别。
+  Stable local code signature, so microphone and speech permissions survive updates.
+- 安装包同时支持 Apple 芯片和 Intel。Universal build (Apple silicon + Intel).
+
+### 变更 Changed
+- 界面改为黑白配色：主按钮白底黑字，选中、进度条、开关都用黑白灰；语速、导演提示、重点这些状态色保持彩色。
+  Black-and-white theme; status colors (pace, cues, emphasis) stay colored.
+- 提词时正在读的字是纯白并带一条细下划线，还没读到的字是灰色。
+  The word being read is white with a thin underline; upcoming words are gray.
+- 新图标：白底，左边是声波，右边变成一行字。New app icon: a sound wave turning into a line of text.
+
 ## [0.2.0] - 2026-10-14
+
+> 改名 OpenSpeech，界面更简洁，提词卡片可以随意拖动。
 
 ### 变更 Changed
 - 产品改名：OpenPitch → OpenSpeech。首次启动自动迁移旧的稿件库、设置、跟随日志（旧数据保留）。因为应用标识变了，系统会重新询问一次麦克风和语音识别权限。
@@ -25,7 +50,9 @@ Format based on Keep a Changelog; versions follow Semantic Versioning.
 
 ## [0.1.0] - 2026-10-14
 
-第一个公开版本。First public release.
+> 第一个公开版本：跟着你的声音走的刘海提词器。
+
+First public release.
 
 ### 新增 Added
 - 语音跟读：本机语音识别 + 拼音模糊对齐，支持中文、英文、中英混排；多音字、数字两种写法（“2024” / “二零二四”）统一处理。

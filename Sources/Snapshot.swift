@@ -75,3 +75,56 @@ enum SnapshotRenderer {
         }
     }
 }
+
+/// `OpenSpeech --snapshot-updates <dir>`：把更新横幅、更新卡片、进度、版本日志各个状态渲染成 PNG
+enum UpdateSnapshot {
+    @MainActor
+    static func run(dir: String) {
+        try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
+        let sample = Changelog.parse("""
+        ## [0.3.1] - 2026-10-20
+
+        > 英文跟读更准，修复 3 个问题。
+
+        ### 新增 Added
+        - 英文稿按词跟读，换行更自然。
+        ### 修复 Fixed
+        - 外接屏上卡片位置偏移。
+        - 暂停后偶尔要说两遍才继续。
+        """).first
+
+        func model(_ stage: UpdateModel.Stage, panel: UpdateModel.Panel? = nil, justUpdated: String? = nil) -> UpdateModel {
+            let m = UpdateModel()
+            m.release = sample
+            m.releaseSize = 4_100_000
+            m.stage = stage
+            m.panel = panel
+            m.justUpdated = justUpdated
+            return m
+        }
+        func save<V: View>(_ name: String, width: CGFloat, height: CGFloat? = nil, _ view: V) {
+            let r = ImageRenderer(content: view
+                .padding(20)
+                .frame(width: width, height: height, alignment: .top)
+                .background(Color(hex: 0x16161C))
+                .environment(\.colorScheme, .dark))
+            r.scale = 2
+            guard let img = r.nsImage, let tiff = img.tiffRepresentation,
+                  let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) else { return }
+            try? png.write(to: URL(fileURLWithPath: dir).appendingPathComponent("\(name).png"))
+        }
+
+        save("1-banner", width: 640, UpdateBanner(model: model(.available)))
+        save("2-notes", width: 640, height: 640, UpdateOverlay(model: model(.available, panel: .notes)))
+        save("3-downloading", width: 640, height: 560, UpdateOverlay(model: model(.downloading(received: 2_600_000, total: 4_100_000), panel: .progress)))
+        save("4-installing", width: 640, height: 560, UpdateOverlay(model: model(.installing, panel: .progress)))
+        save("5-failed", width: 640, height: 560, UpdateOverlay(model: model(.failed("网络断开了，检查网络后重试"), panel: .progress)))
+        save("6-move", width: 640, height: 460, UpdateOverlay(model: model(.needsMove, panel: .move)))
+        save("7-updated", width: 640, UpdateBanner(model: model(.idle, justUpdated: "0.3.1")))
+        save("8-changelog-cards", width: 600, ChangelogList(model: model(.available)))
+        let footers: [UpdateModel.Stage] = [.idle, .available, .checking, .upToDate, .checkFailed(offline: true), .checkFailed(offline: false)]
+        save("9-footer", width: 320, VStack(spacing: 14) {
+            ForEach(Array(footers.enumerated()), id: \.offset) { _, st in UpdateFooter(model: model(st)) }
+        })
+    }
+}

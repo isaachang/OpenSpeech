@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -6,8 +7,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     let store = ScriptStore()
     let settings = PrompterSettings()
     lazy var engine = PrompterEngine(settings: settings)
+    let updates = UpdateModel()
+    private lazy var updater = UpdateController(model: updates)
     private var island: IslandController?
     private var libraryWindow: NSWindow?
+    private var bag: Set<AnyCancellable> = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.appearance = NSAppearance(named: .darkAqua)
@@ -28,6 +32,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         )
         registerHotKeys()
         showLibrary()
+        startUpdates()
         if args.contains("--autostart") {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { self.startSelected() }
         }
@@ -39,6 +44,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         if libraryWindow?.isVisible != true { showLibrary() }
         return true
     }
+
+    // MARK: - Updates
+
+    private func startUpdates() {
+        // 正在提词（不算预览）时不弹更新横幅，讲完再提示
+        engine.$phase.combineLatest(engine.$previewing)
+            .map { phase, preview in phase.isActive && !preview }
+            .removeDuplicates()
+            .sink { [weak self] in self?.updates.prompting = $0 }
+            .store(in: &bag)
+        updater.start()
+        if let v = updates.justUpdated {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in self?.island?.flash("✓ 已更新到 \(v)") }
+        }
+    }
+
+    @objc func checkForUpdates() { showLibrary(); updater.checkNow() }
+    @objc func showChangelog() { showLibrary(); updates.panel = .changelog }
 
     // MARK: - Actions
 
@@ -138,7 +161,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     @objc func showLibrary() {
         if libraryWindow == nil {
             let view = LibraryView(
-                store: store, settings: settings,
+                store: store, settings: settings, updates: updates,
                 actions: LibraryActions(
                     start: { [weak self] in self?.startSelected() },
                     newScript: { [weak self] in self?.newScript() },
@@ -183,6 +206,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
         let appMenu = NSMenu()
         appMenu.addItem(withTitle: "关于 OpenSpeech", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        appMenu.addItem(item("检查更新…", #selector(checkForUpdates), ""))
+        appMenu.addItem(item("版本日志", #selector(showChangelog), ""))
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "隐藏 OpenSpeech", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
         appMenu.addItem(withTitle: "退出 OpenSpeech", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")

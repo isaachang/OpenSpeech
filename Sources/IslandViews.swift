@@ -338,7 +338,7 @@ struct DropContent: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 5]))
                 .foregroundStyle(Theme.accent)
-                .background(RoundedRectangle(cornerRadius: 16).fill(Theme.indigo.opacity(0.08)))
+                .background(RoundedRectangle(cornerRadius: 16).fill(Theme.soft))
                 .overlay(
                     HStack(spacing: 12) {
                         Image(systemName: "arrow.down.doc.fill").font(.system(size: 24)).foregroundStyle(Theme.accent)

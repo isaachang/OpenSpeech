@@ -10,17 +10,29 @@ extension Color {
     }
 }
 
+/// 全 App 的颜色都从这里取，换配色只改这一处。
 enum Theme {
-    static let mint = Color(hex: 0x5EEAD4)
-    static let indigo = Color(hex: 0x818CF8)
-    static let violet = Color(hex: 0xC084FC)
-    static let amber = Color(hex: 0xFCD34D)
-    static let cue = Color(hex: 0xFDBA74)
-    static let green = Color(hex: 0x4ADE80)
-    static let sky = Color(hex: 0x7DD3FC)
-    static let orange = Color(hex: 0xFB923C)
-    static let emphasis = Color(hex: 0xFDE68A)
-    static let accent = LinearGradient(colors: [mint, indigo, violet], startPoint: .leading, endPoint: .trailing)
+    // 品牌色：黑白。主按钮是白底黑字，选中、进度、跟读高亮都用白色的明暗来区分
+    static let accent = Color(hex: 0xF5F5F7)
+    /// 白色主按钮上的文字和图标
+    static let onAccent = Color.black
+    /// 开关、滑块打开时的颜色（比纯白暗一点，白色的开关圆钮才看得清）
+    static let control = Color(hex: 0xBDBDC2)
+    /// 选中的底色、轻微的光晕
+    static let soft = Color.white.opacity(0.1)
+    static let link = Color.white.opacity(0.88)
+    /// 提词：正在读的字纯白、带一条细下划线，还没读到的字灰一些，读过的更灰（LineStyler）
+    static let current = Color.white
+    static let upcoming = Color.white.opacity(0.58)
+
+    // 状态色：表示意思，不跟着配色变
+    static let amber = Color(hex: 0xFCD34D)      // 字幕胶囊样式
+    static let cue = Color(hex: 0xFDBA74)        // 【导演提示】
+    static let emphasis = Color(hex: 0xFDE68A)   // **重点**
+    static let green = Color(hex: 0x4ADE80)      // 语速正好、完成
+    static let sky = Color(hex: 0x7DD3FC)        // 语速偏慢
+    static let orange = Color(hex: 0xFB923C)     // 语速偏快、提醒
+    static let red = Color(hex: 0xF87171)        // 出错
 }
 
 enum Fmt {
@@ -78,7 +90,7 @@ struct IslandButton: View {
                 Image(systemName: icon).font(.system(size: 11, weight: .bold))
                 if let label { Text(label).font(.system(size: 12, weight: .semibold)) }
             }
-            .foregroundColor(prominent ? .black : .white.opacity(0.9))
+            .foregroundColor(prominent ? Theme.onAccent : .white.opacity(0.9))
             .padding(.horizontal, label == nil ? 9 : 13)
             .frame(minWidth: 28)
             .frame(height: 26)
@@ -89,26 +101,23 @@ struct IslandButton: View {
     }
 }
 
+/// 小号 App 图标（和 AppIcon 同一个图案）：白底，左边声波、右边变成一行字
 struct AppGlyph: View {
     var size: CGFloat = 28
 
     var body: some View {
-        ZStack(alignment: .top) {
-            RoundedRectangle(cornerRadius: size * 0.26, style: .continuous)
-                .fill(LinearGradient(colors: [Color(hex: 0x2E2A78), Color(hex: 0x0B0B14)], startPoint: .top, endPoint: .bottom))
-            Capsule().fill(Color.black)
-                .frame(width: size * 0.52, height: size * 0.16)
-                .padding(.top, size * 0.1)
-            VStack(alignment: .leading, spacing: size * 0.07) {
-                Capsule().fill(Color.white.opacity(0.3)).frame(width: size * 0.48, height: size * 0.07)
-                Capsule().fill(Theme.accent).frame(width: size * 0.62, height: size * 0.085)
-                Capsule().fill(Color.white.opacity(0.85)).frame(width: size * 0.4, height: size * 0.07)
+        let u = size / 100
+        ZStack {
+            RoundedRectangle(cornerRadius: size * 0.225, style: .continuous)
+                .fill(LinearGradient(colors: [.white, Color(hex: 0xE8E8ED)], startPoint: .top, endPoint: .bottom))
+            HStack(alignment: .center, spacing: 3.5 * u) {
+                ForEach([12.0, 26, 16, 7], id: \.self) { h in
+                    Capsule().fill(Color(hex: 0x111111)).frame(width: 4.5 * u, height: h * u)
+                }
+                Capsule().fill(Color(hex: 0x111111)).frame(width: 27 * u, height: 7 * u).padding(.leading, 1 * u)
             }
-            .frame(width: size * 0.62, alignment: .leading)
-            .padding(.top, size * 0.4)
         }
         .frame(width: size, height: size)
-        .overlay(RoundedRectangle(cornerRadius: size * 0.26, style: .continuous).strokeBorder(Color.white.opacity(0.1), lineWidth: 0.5))
     }
 }
 

@@ -26,6 +26,11 @@ if let i = args.firstIndex(of: "--snapshot"), i + 1 < args.count {
     exit(0)
 }
 
+if let i = args.firstIndex(of: "--snapshot-updates"), i + 1 < args.count {
+    MainActor.assumeIsolated { UpdateSnapshot.run(dir: args[i + 1]) }
+    exit(0)
+}
+
 Migration.runIfNeeded()
 let delegate = AppDelegate()
 app.delegate = delegate

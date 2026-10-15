@@ -262,7 +262,7 @@ private struct RoundIcon: View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(.system(size: 11, weight: .bold))
-                .foregroundColor(prominent ? .black : .white.opacity(0.9))
+                .foregroundColor(prominent ? Theme.onAccent : .white.opacity(0.9))
                 .frame(width: 30, height: 30)
                 .background(Circle().fill(prominent
                     ? (glass ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(Theme.amber))
@@ -294,6 +294,9 @@ struct CardHint: View {
 struct LineStyler {
     let engine: PrompterEngine
     let current: Color
+    var upcoming: Color = .white
+    /// 正在读的字下面画一条线（黑白配色里只靠颜色分不清正在读和还没读）
+    var underlineCurrent = false
     /// 字幕胶囊里“正在读”已经是黄色，重点改用加粗
     var boldEmphasis = false
 
@@ -303,7 +306,7 @@ struct LineStyler {
         switch r {
         case .read: return .white.opacity(0.32)
         case .current: return current
-        case .upcoming: return .white
+        case .upcoming: return upcoming
         case .emphasis: return boldEmphasis ? .white : Theme.emphasis
         case .cue: return Theme.cue.opacity(0.95)
         case .cueRead: return Theme.cue.opacity(0.35)
@@ -326,6 +329,7 @@ struct LineStyler {
             guard let rr = runRole, !buf.isEmpty else { return }
             var t = Text(verbatim: buf).foregroundColor(color(rr))
             if rr == .emphasis && boldEmphasis { t = t.bold() }
+            if rr == .current && underlineCurrent { t = t.underline(true, color: current.opacity(0.75)) }
             result = result + t
         }
         let glyphs = engine.parsed.glyphs
@@ -361,7 +365,7 @@ struct PrompterTextView: View {
         let hi = min(engine.lines.count, base + visibleLines + 3)
         let cursorInt = Int(engine.cursor)
         let font = Font(PrompterLayout.font(fontSize) as CTFont)
-        let styler = LineStyler(engine: engine, current: Theme.mint)
+        let styler = LineStyler(engine: engine, current: Theme.current, upcoming: Theme.upcoming, underlineCurrent: true)
 
         ZStack(alignment: .topLeading) {
             ForEach(lo..<max(lo, hi), id: \.self) { li in

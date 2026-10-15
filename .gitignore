@@ -12,3 +12,7 @@ docs/competitor-ui/
 screenshots/
 .DS_Store
 design/
+# 第三方依赖（tools/fetch-sparkle.sh 自动下载）
+vendor/
+# 发版产物
+dist/

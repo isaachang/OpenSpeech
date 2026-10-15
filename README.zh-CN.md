@@ -1,13 +1,13 @@
 # OpenSpeech
 
-![version](https://img.shields.io/badge/version-0.2.0-blue) ![platform](https://img.shields.io/badge/platform-macOS%2014%2B-lightgrey) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.3.0-blue) ![platform](https://img.shields.io/badge/platform-macOS%2014%2B-lightgrey) ![license](https://img.shields.io/badge/license-MIT-green)
 
 [English](README.md) · [版本日志](CHANGELOG.md)
 
 一个住在 MacBook 刘海里、**会跟着你说话走**的开源提词器。
 适合开会、学生上台讲 presentation、录屏讲解：需要看着镜头念稿的场合都能用。
 
-> **当前状态：早期版本（v0.1.0）。** 核心的语音跟随已经可用，界面还在重新设计。
+> **当前状态：早期版本（v0.3.0）。** 核心的语音跟随已经可用，界面还在重新设计。
 
 ## 功能
 
@@ -18,12 +18,21 @@
 - **智能匀速模式**：按你的语速滚动，你一停嘴它就停。
 - 共享屏幕时隐藏（见下方[共享屏幕](#共享屏幕)）、全局快捷键、导入 txt / md / docx / pdf / rtf，也可以把文件直接拖到刘海上。
 
+## 下载安装
+
+1. 打开 [Releases 页面](https://github.com/isaachang/OpenSpeech/releases/latest)，下载 `OpenSpeech-x.y.z.zip`，双击解压。
+2. 把 `OpenSpeech.app` **拖进「应用程序」文件夹**。不要直接在「下载」里打开，否则以后没法在 App 里更新。
+3. 第一次打开：macOS 会提示“无法验证开发者”（我们没有付费的苹果开发者账号）。点「完成」，然后打开 **系统设置 › 隐私与安全性**，拉到最下面点 **「仍要打开」**。macOS 14 也可以直接在「应用程序」里右键 OpenSpeech › 打开。只有第一次需要这样做。
+4. 允许 **麦克风** 和 **语音识别** 权限。
+
+之后有新版本时，主窗口顶部会提示，点「立即更新」就会自动下载、安装、重新打开，稿件和设置都保留。也可以随时点右下角的「检查更新」和「版本日志」。
+
 ## 运行环境
 
 - macOS 14 及以上（Apple 芯片或 Intel）
 - Xcode 命令行工具（`xcode-select --install`）
 
-## 编译和运行
+## 从源码编译
 
 ```bash
 ./build.sh
@@ -70,7 +79,9 @@ tools/eval/run.sh   # 单元测试 + 新稿件模拟 + 本机真实日志回放
 
 改动跟随算法时，必须在"没见过的新稿件模拟"和"真实日志回放"两份数据上都没有变差，不为单个案例加规则。
 
-**发布新版本：** 改 `VERSION`、两个 README 顶部的版本号，在 `CHANGELOG.md` 里加一条记录，然后运行 `tools/check-version.sh` 检查。
+**发布新版本：** 改 `VERSION`、两个 README 顶部的版本号，在 `CHANGELOG.md` 里加一条记录（标题下面用 `>` 写一句给用户看的总结，App 里会显示），然后运行 `tools/check-version.sh` 检查。
+
+**App 内更新（Sparkle）：** 第一次先运行 `tools/setup-signing.sh`，生成本机签名证书和更新签名私钥，放在 `~/.openspeech-signing`，**一定要备份这个文件夹**。`tools/test-update.sh` 在本机把“旧版本 → 新版本”完整跑一遍；`tools/release.sh` 编译通用版本、签名、生成 `appcast.xml` 并发布到 GitHub Releases。
 
 `docs/` 里是开发过程中的调研记录（当时产品还叫 NotchCue）。
 

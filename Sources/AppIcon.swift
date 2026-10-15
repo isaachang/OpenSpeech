@@ -19,6 +19,8 @@ enum AppIcon {
                 blue: CGFloat(hex & 0xFF) / 255, alpha: a)
     }
 
+    /// 白底圆角方块，左边四根声波竖条，右边变成一行字：“声音变成字”。
+    /// 图案按 100×100 的网格设计（和 design/icons.html 里的 04 / 黑白版一致）
     static func draw(_ c: CGContext, _ s: CGFloat) {
         let rgb = CGColorSpaceCreateDeviceRGB()
         let inset = s * 0.1
@@ -27,76 +29,36 @@ enum AppIcon {
         let body = CGPath(roundedRect: r, cornerWidth: rad, cornerHeight: rad, transform: nil)
 
         c.saveGState()
-        c.setShadow(offset: CGSize(width: 0, height: -s * 0.012), blur: s * 0.035, color: col(0, 0.45))
+        c.setShadow(offset: CGSize(width: 0, height: -s * 0.012), blur: s * 0.035, color: col(0, 0.35))
         c.addPath(body)
-        c.setFillColor(col(0x0B0B14))
+        c.setFillColor(col(0xFFFFFF))
         c.fillPath()
         c.restoreGState()
 
         c.saveGState()
         c.addPath(body)
         c.clip()
-        let bg = CGGradient(colorsSpace: rgb, colors: [col(0x2E2A78), col(0x15132E), col(0x07070C)] as CFArray,
-                            locations: [0, 0.55, 1])!
+        let bg = CGGradient(colorsSpace: rgb, colors: [col(0xFFFFFF), col(0xE8E8ED)] as CFArray, locations: [0, 1])!
         c.drawLinearGradient(bg, start: CGPoint(x: r.midX, y: r.maxY), end: CGPoint(x: r.midX, y: r.minY), options: [])
-        let glowCenter = CGPoint(x: r.midX, y: r.minY + r.height * 0.36)
-        let glow = CGGradient(colorsSpace: rgb, colors: [col(0x818CF8, 0.45), col(0x818CF8, 0)] as CFArray, locations: [0, 1])!
-        c.drawRadialGradient(glow, startCenter: glowCenter, startRadius: 0, endCenter: glowCenter, endRadius: r.width * 0.55, options: [])
 
-        // 灵动岛
-        let pillW = r.width * 0.54, pillH = r.height * 0.15
-        let pill = CGRect(x: r.midX - pillW / 2, y: r.maxY - r.height * 0.09 - pillH, width: pillW, height: pillH)
-        c.addPath(CGPath(roundedRect: pill, cornerWidth: pillH / 2, cornerHeight: pillH / 2, transform: nil))
-        c.setFillColor(col(0x000000))
-        c.fillPath()
-        let d = pillH * 0.34
-        c.setFillColor(col(0x4ADE80))
-        c.fillEllipse(in: CGRect(x: pill.minX + pillH * 0.42, y: pill.midY - d / 2, width: d, height: d))
-        let bars: [CGFloat] = [0.4, 0.75, 1, 0.55]
-        let bw = pillH * 0.1
-        for (k, h) in bars.enumerated() {
-            let bh = pillH * 0.56 * h
-            let x = pill.maxX - pillH * 0.5 - CGFloat(bars.count - k) * bw * 1.9
-            c.addPath(CGPath(roundedRect: CGRect(x: x, y: pill.midY - bh / 2, width: bw, height: bh),
-                             cornerWidth: bw / 2, cornerHeight: bw / 2, transform: nil))
-            c.setFillColor(col(0x5EEAD4))
+        // 网格坐标（y 向下）→ 画布坐标（y 向上）
+        let u = r.width / 100
+        func bar(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat) {
+            let rect = CGRect(x: r.minX + x * u, y: r.maxY - (y + h) * u, width: w * u, height: h * u)
+            let rr = min(rect.width, rect.height) / 2
+            c.addPath(CGPath(roundedRect: rect, cornerWidth: rr, cornerHeight: rr, transform: nil))
+            c.setFillColor(col(0x111111))
             c.fillPath()
         }
-
-        // 三行提词
-        let x0 = r.minX + r.width * 0.16
-        func line(_ yFrac: CGFloat, _ wFrac: CGFloat, _ hFrac: CGFloat, _ color: CGColor?) {
-            let h = r.height * hFrac
-            let rect = CGRect(x: x0, y: r.minY + r.height * yFrac, width: r.width * wFrac, height: h)
-            let path = CGPath(roundedRect: rect, cornerWidth: h / 2, cornerHeight: h / 2, transform: nil)
-            if let color {
-                c.addPath(path)
-                c.setFillColor(color)
-                c.fillPath()
-            } else {
-                c.saveGState()
-                c.addPath(path)
-                c.clip()
-                let g = CGGradient(colorsSpace: rgb, colors: [col(0x5EEAD4), col(0x818CF8), col(0xC084FC)] as CFArray,
-                                   locations: [0, 0.5, 1])!
-                c.drawLinearGradient(g, start: CGPoint(x: rect.minX, y: rect.midY), end: CGPoint(x: rect.maxX, y: rect.midY), options: [])
-                c.restoreGState()
-            }
-        }
-        line(0.52, 0.5, 0.065, col(0xFFFFFF, 0.28))
-        line(0.36, 0.68, 0.085, nil)
-        line(0.22, 0.44, 0.065, col(0xFFFFFF, 0.85))
-        // 光标
-        let caretH = r.height * 0.11
-        c.addPath(CGPath(roundedRect: CGRect(x: r.minX + r.width * 0.1, y: r.minY + r.height * 0.36 - (caretH - r.height * 0.085) / 2,
-                                             width: r.width * 0.025, height: caretH),
-                         cornerWidth: r.width * 0.0125, cornerHeight: r.width * 0.0125, transform: nil))
-        c.setFillColor(col(0x5EEAD4))
-        c.fillPath()
+        bar(20, 44, 4.5, 12)
+        bar(28, 37, 4.5, 26)
+        bar(36, 42, 4.5, 16)
+        bar(44, 46.5, 4.5, 7)
+        bar(53, 46.5, 27, 7)
         c.restoreGState()
 
         c.addPath(body)
-        c.setStrokeColor(col(0xFFFFFF, 0.08))
+        c.setStrokeColor(col(0x000000, 0.1))
         c.setLineWidth(s * 0.004)
         c.strokePath()
     }

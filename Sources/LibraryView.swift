@@ -14,16 +14,18 @@ struct LibraryActions {
 struct LibraryView: View {
     @ObservedObject var store: ScriptStore
     @ObservedObject var settings: PrompterSettings
+    let updates: UpdateModel
     let actions: LibraryActions
     @State private var dropTargeted = false
 
     var body: some View {
         HStack(spacing: 0) {
             Sidebar(store: store, settings: settings, actions: actions).frame(width: 250)
-            EditorPane(store: store, settings: settings, actions: actions)
-            SettingsPane(settings: settings, actions: actions).frame(width: 270)
+            EditorPane(store: store, settings: settings, updates: updates, actions: actions)
+            SettingsPane(settings: settings, updates: updates, actions: actions).frame(width: 270)
         }
         .background(Color(hex: 0x16161C).ignoresSafeArea())
+        .overlay { UpdateOverlay(model: updates) }
         .overlay {
             if dropTargeted {
                 RoundedRectangle(cornerRadius: 18)
@@ -135,6 +137,7 @@ private struct ScriptRow: View {
 private struct EditorPane: View {
     @ObservedObject var store: ScriptStore
     @ObservedObject var settings: PrompterSettings
+    let updates: UpdateModel
     let actions: LibraryActions
 
     private var binding: Binding<Script>? {
@@ -154,6 +157,7 @@ private struct EditorPane: View {
         if let b = binding {
             let stats = ScriptStats(b.wrappedValue.body)
             VStack(alignment: .leading, spacing: 10) {
+                UpdateBanner(model: updates)
                 TextField("稿件标题", text: b.title)
                     .textFieldStyle(.plain)
                     .font(.system(size: 24, weight: .bold))
@@ -182,11 +186,11 @@ private struct EditorPane: View {
                             Text("开始提词")
                         }
                         .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(.black)
+                        .foregroundColor(Theme.onAccent)
                         .padding(.horizontal, 26)
                         .frame(height: 40)
                         .background(Capsule().fill(Theme.accent))
-                        .shadow(color: Theme.indigo.opacity(0.45), radius: 14, y: 4)
+                        .shadow(color: Theme.accent.opacity(0.18), radius: 14, y: 4)
                     }
                     .buttonStyle(PressStyle())
                     .keyboardShortcut(.return, modifiers: .command)
@@ -219,6 +223,7 @@ private struct EditorPane: View {
 
 private struct SettingsPane: View {
     @ObservedObject var settings: PrompterSettings
+    let updates: UpdateModel
     let actions: LibraryActions
 
     var body: some View {
@@ -236,7 +241,7 @@ private struct SettingsPane: View {
                 Text("字号").font(.system(size: 13))
                 Spacer()
                 Image(systemName: "textformat.size.smaller").font(.system(size: 10)).foregroundColor(.white.opacity(0.45))
-                Slider(value: Binding(get: { settings.fontSize }, set: { settings.fontSize = $0.rounded() }), in: 16...36).controlSize(.small).tint(Theme.indigo).frame(width: 110)
+                Slider(value: Binding(get: { settings.fontSize }, set: { settings.fontSize = $0.rounded() }), in: 16...36).controlSize(.small).tint(Theme.control).frame(width: 110)
                 Image(systemName: "textformat.size.larger").font(.system(size: 12)).foregroundColor(.white.opacity(0.45))
             }
             .help("\(Int(settings.fontSize)) pt")
@@ -274,6 +279,7 @@ private struct SettingsPane: View {
             .help("摄像头正下方。也可以直接双击提词卡片")
 
             Spacer()
+            UpdateFooter(model: updates)
         }
         .padding(.horizontal, 20)
         .padding(.top, 44)
@@ -289,7 +295,7 @@ private struct SwitchRow: View {
         HStack {
             Text(title).font(.system(size: 13))
             Spacer()
-            Toggle("", isOn: $isOn).labelsHidden().toggleStyle(.switch).controlSize(.small)
+            Toggle("", isOn: $isOn).labelsHidden().toggleStyle(.switch).controlSize(.small).tint(Theme.control)
         }
     }
 }
@@ -304,7 +310,7 @@ private struct StyleThumb: View {
         Button(action: action) {
             VStack(spacing: 7) {
                 ZStack(alignment: .top) {
-                    RoundedRectangle(cornerRadius: 9).fill(Color(hex: 0x3A3D6E))
+                    RoundedRectangle(cornerRadius: 9).fill(Color(hex: 0x2C2C31))
                     Capsule().fill(Color.black).frame(width: 30, height: 6).offset(y: -1)
                     preview.padding(.top, 14)
                 }
